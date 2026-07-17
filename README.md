@@ -108,9 +108,7 @@ A push to `main` runs `.github/workflows/pages.yml`, validates the site, stages 
 Expected project URLs:
 
 ```text
-https://OWNER.github.io/REPOSITORY/
-https://OWNER.github.io/REPOSITORY/app.html
-https://OWNER.github.io/REPOSITORY/tutorial.html
+https://teagualicious.github.io/Chip-Mobile-Support/
 ```
 
 All navigation and assets use relative paths, so the repository name does not need to be hard-coded.
