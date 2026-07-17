@@ -427,9 +427,62 @@
     // Mirrors the frozen step order in CHIPv.4.2-tutorial.html; unmatched
     // selectors are simply ignored if the source ever changes.
     const drawerStepTargets = [".hdr", "#modeSeg", ".field", "#dmaClientFilters"];
+    // Step 6 ("Review the detail panel") falls back to highlighting the app
+    // bar when no county is selected. On mobile the detail sheet is hidden
+    // until a selection exists, so the step showed nothing useful.
+    const detailStepIndex = 5;
     let autoOpenedDrawer = false;
+    let autoSelectedCounty = false;
     let rerenderTimer = 0;
     let layoutFrameId = 0;
+
+    // `selectCounty`, `deselect`, and `GEO` are top-level bindings in the
+    // original inline scripts; `GEO` is a const, so the sample-selection
+    // helpers must run as a script inside the child document.
+    if (!doc.getElementById("chip-tour-detail-helpers")) {
+      const helperScript = doc.createElement("script");
+      helperScript.id = "chip-tour-detail-helpers";
+      helperScript.textContent = [
+        "(function chipTourDetailHelpers() {",
+        "  if (window.__chipTourShowDetailSample) { return; }",
+        "  window.__chipTourShowDetailSample = function () {",
+        "    try {",
+        "      var detail = document.getElementById(\"detail\");",
+        "      if (!detail || detail.classList.contains(\"open\")) { return false; }",
+        "      if (typeof selectCounty !== \"function\" || typeof GEO === \"undefined\") { return false; }",
+        "      var features = (GEO.counties && GEO.counties.features) || [];",
+        "      var feature = null;",
+        "      for (var i = 0; i < features.length; i++) {",
+        "        var props = features[i] && features[i].properties;",
+        "        if (props && props.name === \"Cuyahoga\") { feature = features[i]; break; }",
+        "      }",
+        "      feature = feature || features[0];",
+        "      if (!feature || feature.id === undefined) { return false; }",
+        "      selectCounty(feature.id);",
+        "      return true;",
+        "    } catch (error) { return false; }",
+        "  };",
+        "  window.__chipTourClearDetailSample = function () {",
+        "    try { if (typeof deselect === \"function\") { deselect(); } } catch (error) {}",
+        "  };",
+        "})();",
+      ].join("\n");
+      doc.body.appendChild(helperScript);
+    }
+
+    function clearDetailSample() {
+      doc.body.classList.remove("chip-tour-detail-step");
+      if (!autoSelectedCounty) {
+        return;
+      }
+      autoSelectedCounty = false;
+      try {
+        frame.contentWindow.__chipTourClearDetailSample();
+      } catch (error) {
+        // Losing the deselect only leaves a county selected, which the
+        // user can clear by tapping the map.
+      }
+    }
 
     function requestTourRerender() {
       window.clearTimeout(rerenderTimer);
@@ -450,11 +503,13 @@
 
       if (!mobile) {
         doc.body.style.removeProperty("--chip-tour-card-height");
+        clearDetailSample();
         return;
       }
 
       if (!active) {
         doc.body.style.removeProperty("--chip-tour-card-height");
+        clearDetailSample();
         if (autoOpenedDrawer) {
           autoOpenedDrawer = false;
           controls.classList.remove("open");
@@ -468,29 +523,47 @@
         ? drawerStepTargets[stepIndex]
         : null;
       const target = selector ? doc.querySelector(selector) : null;
+      const drawerTarget = target && target.closest("#ctrl, .ctrl") ? target : null;
 
-      if (target && target.closest("#ctrl, .ctrl")) {
+      if (drawerTarget) {
         if (!controls.classList.contains("open")) {
           controls.classList.add("open");
           autoOpenedDrawer = true;
         }
-        window.cancelAnimationFrame(layoutFrameId);
-        layoutFrameId = window.requestAnimationFrame(function fitTourAndTarget() {
-          const cardHeight = Math.ceil(card.getBoundingClientRect().height);
-          doc.body.style.setProperty("--chip-tour-card-height", cardHeight + "px");
-          layoutFrameId = window.requestAnimationFrame(function revealTourTarget() {
-            try {
-              target.scrollIntoView({ block: "center", inline: "nearest" });
-            } catch (error) {
-              target.scrollIntoView();
-            }
-            requestTourRerender();
-          });
-        });
       } else if (autoOpenedDrawer) {
         autoOpenedDrawer = false;
         controls.classList.remove("open");
       }
+
+      if (stepIndex === detailStepIndex) {
+        doc.body.classList.add("chip-tour-detail-step");
+        try {
+          if (frame.contentWindow.__chipTourShowDetailSample()) {
+            autoSelectedCounty = true;
+          }
+        } catch (error) {
+          // Without a sample selection the tour falls back to its original
+          // app-bar highlight for this step.
+        }
+      } else {
+        clearDetailSample();
+      }
+
+      window.cancelAnimationFrame(layoutFrameId);
+      layoutFrameId = window.requestAnimationFrame(function fitTourCard() {
+        const cardHeight = Math.ceil(card.getBoundingClientRect().height);
+        doc.body.style.setProperty("--chip-tour-card-height", cardHeight + "px");
+        if (drawerTarget) {
+          layoutFrameId = window.requestAnimationFrame(function revealTourTarget() {
+            try {
+              drawerTarget.scrollIntoView({ block: "center", inline: "nearest" });
+            } catch (error) {
+              drawerTarget.scrollIntoView();
+            }
+            requestTourRerender();
+          });
+        }
+      });
 
       requestTourRerender();
     }
@@ -505,6 +578,7 @@
       window.clearTimeout(rerenderTimer);
       window.cancelAnimationFrame(layoutFrameId);
       doc.body.style.removeProperty("--chip-tour-card-height");
+      doc.body.classList.remove("chip-tour-detail-step");
     });
   }
 
