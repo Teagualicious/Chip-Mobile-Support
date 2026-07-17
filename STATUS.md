@@ -20,10 +20,12 @@ Phase 1 — GitHub Pages delivery layer implemented; review and deployed-device 
 - Replaced the Python-template documentation with project-specific `README.md` and `CLAUDE.md` guidance.
 - Replaced the release-oriented workflow with static validation and added a GitHub Pages Actions deployment workflow.
 - Added repository-level static tests in `tests/test_site.py`.
+- Opened draft pull request #1 from `agent/github-pages-mobile-demo` into `main`.
+- Validation completed: local `pytest -q` passed 11 tests, all three browser scripts passed `node --check`, and pull-request CI run #7 completed successfully.
 
 ## Next up
 
-1. Review the draft pull request and inspect the Pages preview or merged deployment.
+1. Review draft pull request #1 and inspect the Pages site after merge to `main`.
 2. Complete visual QA on iPhone Safari, Android Chrome, iPad Safari, and representative desktop sizes.
 3. Record any device-specific defects here before making follow-up changes.
 
