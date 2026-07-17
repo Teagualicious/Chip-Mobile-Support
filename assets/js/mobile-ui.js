@@ -141,6 +141,58 @@
     doc.body.appendChild(script);
   }
 
+  function applyMobileLabelTuning(doc) {
+    if (detectDeviceMode() !== "mobile" || doc.getElementById("chip-mobile-label-tuning")) {
+      return;
+    }
+
+    // The original `positionLabels` hides every county label below zoom 7.2
+    // because small counties collide at desktop label sizes. The mobile
+    // full-market view sits near zoom 6.7, so the default view showed no
+    // labels at all. Keep labels visible while zooming out, growing them
+    // modestly for readability, and only hide once the market itself is too
+    // small to label. `map`, `positionLabels`, and the label elements live in
+    // the child document, so the tuner runs as an injected script. Wrapping
+    // `positionLabels` covers handlers registered after this script runs;
+    // the extra map listeners cover handlers registered before it.
+    const script = doc.createElement("script");
+    script.id = "chip-mobile-label-tuning";
+    script.textContent = [
+      "(function chipMobileLabelTuning() {",
+      "  try {",
+      "    if (typeof map === \"undefined\" || !map || typeof map.on !== \"function\") { return; }",
+      "    if (typeof positionLabels !== \"function\") { return; }",
+      "    var BASE_ZOOM = 7.2;",
+      "    var MIN_ZOOM = 5.2;",
+      "    var MAX_SIZE = 13.5;",
+      "    function tuneLabels() {",
+      "      var z = map.getZoom();",
+      "      var labels = document.querySelectorAll(\"#labels .clab\");",
+      "      if (!labels.length) { return; }",
+      "      var boosted = z < BASE_ZOOM;",
+      "      var visible = z >= MIN_ZOOM;",
+      "      var size = Math.min(MAX_SIZE, 11 + (BASE_ZOOM - z) * 0.9);",
+      "      for (var i = 0; i < labels.length; i++) {",
+      "        if (!boosted || !visible) { labels[i].style.removeProperty(\"font-size\"); }",
+      "        if (!boosted) { continue; }",
+      "        labels[i].style.opacity = visible ? 1 : 0;",
+      "        if (visible) {",
+      "          /* The mobile stylesheet pins .clab to 11px with !important. */",
+      "          labels[i].style.setProperty(\"font-size\", size.toFixed(1) + \"px\", \"important\");",
+      "        }",
+      "      }",
+      "    }",
+      "    var originalPositionLabels = positionLabels;",
+      "    positionLabels = function () { originalPositionLabels(); tuneLabels(); };",
+      "    map.on(\"move\", tuneLabels);",
+      "    map.on(\"zoom\", tuneLabels);",
+      "    tuneLabels();",
+      "  } catch (error) {}",
+      "})();",
+    ].join("\n");
+    doc.body.appendChild(script);
+  }
+
   function createBackdrop(doc) {
     let backdrop = doc.querySelector(".chip-mobile-backdrop");
     if (backdrop) {
@@ -427,9 +479,62 @@
     // Mirrors the frozen step order in CHIPv.4.2-tutorial.html; unmatched
     // selectors are simply ignored if the source ever changes.
     const drawerStepTargets = [".hdr", "#modeSeg", ".field", "#dmaClientFilters"];
+    // Step 6 ("Review the detail panel") falls back to highlighting the app
+    // bar when no county is selected. On mobile the detail sheet is hidden
+    // until a selection exists, so the step showed nothing useful.
+    const detailStepIndex = 5;
     let autoOpenedDrawer = false;
+    let autoSelectedCounty = false;
     let rerenderTimer = 0;
     let layoutFrameId = 0;
+
+    // `selectCounty`, `deselect`, and `GEO` are top-level bindings in the
+    // original inline scripts; `GEO` is a const, so the sample-selection
+    // helpers must run as a script inside the child document.
+    if (!doc.getElementById("chip-tour-detail-helpers")) {
+      const helperScript = doc.createElement("script");
+      helperScript.id = "chip-tour-detail-helpers";
+      helperScript.textContent = [
+        "(function chipTourDetailHelpers() {",
+        "  if (window.__chipTourShowDetailSample) { return; }",
+        "  window.__chipTourShowDetailSample = function () {",
+        "    try {",
+        "      var detail = document.getElementById(\"detail\");",
+        "      if (!detail || detail.classList.contains(\"open\")) { return false; }",
+        "      if (typeof selectCounty !== \"function\" || typeof GEO === \"undefined\") { return false; }",
+        "      var features = (GEO.counties && GEO.counties.features) || [];",
+        "      var feature = null;",
+        "      for (var i = 0; i < features.length; i++) {",
+        "        var props = features[i] && features[i].properties;",
+        "        if (props && props.name === \"Cuyahoga\") { feature = features[i]; break; }",
+        "      }",
+        "      feature = feature || features[0];",
+        "      if (!feature || feature.id === undefined) { return false; }",
+        "      selectCounty(feature.id);",
+        "      return true;",
+        "    } catch (error) { return false; }",
+        "  };",
+        "  window.__chipTourClearDetailSample = function () {",
+        "    try { if (typeof deselect === \"function\") { deselect(); } } catch (error) {}",
+        "  };",
+        "})();",
+      ].join("\n");
+      doc.body.appendChild(helperScript);
+    }
+
+    function clearDetailSample() {
+      doc.body.classList.remove("chip-tour-detail-step");
+      if (!autoSelectedCounty) {
+        return;
+      }
+      autoSelectedCounty = false;
+      try {
+        frame.contentWindow.__chipTourClearDetailSample();
+      } catch (error) {
+        // Losing the deselect only leaves a county selected, which the
+        // user can clear by tapping the map.
+      }
+    }
 
     function requestTourRerender() {
       window.clearTimeout(rerenderTimer);
@@ -443,18 +548,51 @@
       }, 260);
     }
 
+    // The tour positions its card and focus ring from getBoundingClientRect
+    // without ever scrolling a target into view or keeping the card inside
+    // the viewport. On short desktop screens the panel targets sit below the
+    // fold, so steps highlighted nothing and the card ran off the bottom.
+    // The clamp only rewrites the card's inline position when it overflows,
+    // so full-size desktop layouts are untouched.
+    let clampFrameId = 0;
+    function scheduleCardClamp() {
+      window.cancelAnimationFrame(clampFrameId);
+      clampFrameId = window.requestAnimationFrame(function clampTourCard() {
+        if (tourRoot.hidden || detectDeviceMode() === "mobile") {
+          return;
+        }
+        const win = frame.contentWindow;
+        const rect = card.getBoundingClientRect();
+        if (!rect.width || !rect.height) {
+          return;
+        }
+        // The card transitions top/left, so its rect lags behind the tour's
+        // most recent placement; clamp the intended inline position instead.
+        const styleTop = parseFloat(card.style.top);
+        const styleLeft = parseFloat(card.style.left);
+        if (Number.isNaN(styleTop) || Number.isNaN(styleLeft)) {
+          return;
+        }
+        const margin = 14;
+        const top = Math.min(Math.max(styleTop, margin), Math.max(margin, win.innerHeight - rect.height - margin));
+        const left = Math.min(Math.max(styleLeft, margin), Math.max(margin, win.innerWidth - rect.width - margin));
+        if (Math.abs(top - styleTop) > 1) {
+          card.style.top = Math.round(top) + "px";
+        }
+        if (Math.abs(left - styleLeft) > 1) {
+          card.style.left = Math.round(left) + "px";
+        }
+      });
+    }
+
     function syncTourState() {
       const mobile = detectDeviceMode() === "mobile";
       const active = !tourRoot.hidden;
       doc.body.classList.toggle("chip-tour-active", mobile && active);
 
-      if (!mobile) {
-        doc.body.style.removeProperty("--chip-tour-card-height");
-        return;
-      }
-
       if (!active) {
         doc.body.style.removeProperty("--chip-tour-card-height");
+        clearDetailSample();
         if (autoOpenedDrawer) {
           autoOpenedDrawer = false;
           controls.classList.remove("open");
@@ -468,29 +606,65 @@
         ? drawerStepTargets[stepIndex]
         : null;
       const target = selector ? doc.querySelector(selector) : null;
+      const drawerTarget = target && target.closest("#ctrl, .ctrl") ? target : null;
 
-      if (target && target.closest("#ctrl, .ctrl")) {
+      if (!mobile) {
+        doc.body.style.removeProperty("--chip-tour-card-height");
+        clearDetailSample();
+        if (drawerTarget) {
+          window.cancelAnimationFrame(layoutFrameId);
+          layoutFrameId = window.requestAnimationFrame(function revealDesktopTarget() {
+            try {
+              drawerTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
+            } catch (error) {
+              drawerTarget.scrollIntoView();
+            }
+            requestTourRerender();
+          });
+        }
+        scheduleCardClamp();
+        return;
+      }
+
+      if (drawerTarget) {
         if (!controls.classList.contains("open")) {
           controls.classList.add("open");
           autoOpenedDrawer = true;
         }
-        window.cancelAnimationFrame(layoutFrameId);
-        layoutFrameId = window.requestAnimationFrame(function fitTourAndTarget() {
-          const cardHeight = Math.ceil(card.getBoundingClientRect().height);
-          doc.body.style.setProperty("--chip-tour-card-height", cardHeight + "px");
-          layoutFrameId = window.requestAnimationFrame(function revealTourTarget() {
-            try {
-              target.scrollIntoView({ block: "center", inline: "nearest" });
-            } catch (error) {
-              target.scrollIntoView();
-            }
-            requestTourRerender();
-          });
-        });
       } else if (autoOpenedDrawer) {
         autoOpenedDrawer = false;
         controls.classList.remove("open");
       }
+
+      if (stepIndex === detailStepIndex) {
+        doc.body.classList.add("chip-tour-detail-step");
+        try {
+          if (frame.contentWindow.__chipTourShowDetailSample()) {
+            autoSelectedCounty = true;
+          }
+        } catch (error) {
+          // Without a sample selection the tour falls back to its original
+          // app-bar highlight for this step.
+        }
+      } else {
+        clearDetailSample();
+      }
+
+      window.cancelAnimationFrame(layoutFrameId);
+      layoutFrameId = window.requestAnimationFrame(function fitTourCard() {
+        const cardHeight = Math.ceil(card.getBoundingClientRect().height);
+        doc.body.style.setProperty("--chip-tour-card-height", cardHeight + "px");
+        if (drawerTarget) {
+          layoutFrameId = window.requestAnimationFrame(function revealTourTarget() {
+            try {
+              drawerTarget.scrollIntoView({ block: "center", inline: "nearest" });
+            } catch (error) {
+              drawerTarget.scrollIntoView();
+            }
+            requestTourRerender();
+          });
+        }
+      });
 
       requestTourRerender();
     }
@@ -498,13 +672,23 @@
     const observer = new frame.contentWindow.MutationObserver(syncTourState);
     observer.observe(tourRoot, { attributes: true, attributeFilter: ["hidden"] });
     observer.observe(kicker, { childList: true, characterData: true, subtree: true });
+
+    // The tour also re-renders on its own scroll/resize listeners, which
+    // bypass syncTourState. Watching the card's inline style keeps the clamp
+    // applied after every reposition; the clamp settles because it only
+    // writes when the card actually overflows.
+    const cardObserver = new frame.contentWindow.MutationObserver(scheduleCardClamp);
+    cardObserver.observe(card, { attributes: true, attributeFilter: ["style"] });
     syncTourState();
 
     cleanupCallbacks.push(function cleanupTourLayout() {
       observer.disconnect();
+      cardObserver.disconnect();
       window.clearTimeout(rerenderTimer);
       window.cancelAnimationFrame(layoutFrameId);
+      window.cancelAnimationFrame(clampFrameId);
       doc.body.style.removeProperty("--chip-tour-card-height");
+      doc.body.classList.remove("chip-tour-detail-step");
     });
   }
 
@@ -537,6 +721,7 @@
     injectMobileStyles(childDocument);
     setDeviceMode();
     applyMobileMapFit(childDocument);
+    applyMobileLabelTuning(childDocument);
     enhanceControls(childDocument);
     enhanceDetails(childDocument);
     setupTourMobileLayout(childDocument);
