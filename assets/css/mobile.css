@@ -201,6 +201,53 @@
     font-size: 11px !important;
   }
 
+  /*
+   * Guided tour. The original tour positions its card next to the desktop
+   * side panel, which does not exist as an anchored panel on mobile. Pin the
+   * card as a bottom sheet so every step is fully on screen and the
+   * Back / Skip / Next actions stay reachable above the browser toolbar.
+   */
+  html[data-device="mobile"] .tour-card {
+    top: auto !important;
+    right: max(12px, var(--chip-safe-right)) !important;
+    bottom: calc(12px + var(--chip-safe-bottom)) !important;
+    left: max(12px, var(--chip-safe-left)) !important;
+    display: flex;
+    flex-direction: column;
+    width: auto !important;
+    max-width: 520px !important;
+    max-height: calc(52dvh - var(--chip-safe-bottom)) !important;
+    margin: 0 auto;
+  }
+
+  html[data-device="mobile"] .tour-copy {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  html[data-device="mobile"] .tour-btn {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  html[data-device="mobile"] .tour-close {
+    width: 44px;
+    height: 44px;
+    touch-action: manipulation;
+  }
+
+  /*
+   * While the tour is open the controls drawer is shown for the steps that
+   * highlight drawer controls. Cap its height so the drawer and the tour
+   * card never overlap.
+   */
+  html[data-device="mobile"] body.chip-tour-active .ctrl {
+    max-height: max(160px, calc(48dvh - 150px - var(--chip-safe-top))) !important;
+  }
+
   html[data-device="mobile"] *:focus-visible {
     outline: 3px solid rgba(39, 183, 223, 0.9) !important;
     outline-offset: 3px !important;
