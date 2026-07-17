@@ -1,41 +1,47 @@
 # CLAUDE.md
 
-Instructions for Claude Code sessions in this repository. Read STATUS.md before starting any work.
+Instructions for coding-agent sessions in this repository. Read `STATUS.md` and `project.md` before making changes.
 
 ## Project overview
 
-<!-- EDIT PER PROJECT: one paragraph. What this is, who uses it, what "done" looks like. -->
-(Describe the project here.)
+This repository packages the existing CHIP Cleveland–Akron market visualizer as a static GitHub Pages demo. Completion means the original desktop dashboard and tutorial remain intact, a minimal experience-selection landing page recommends the tutorial to first-time visitors, mobile controls work reliably, and the site deploys through GitHub Actions.
 
 ## Stack
 
-- Python 3.11+ (standard library preferred over new dependencies)
-- Tests: pytest, in `tests/`
-- Dependencies: `requirements.txt` — do not add a dependency without noting why in the commit message
+- Static HTML, CSS, and browser JavaScript
+- Existing self-contained MapLibre-based CHIP source files
+- GitHub Pages deployed through GitHub Actions
+- Python 3.12 plus pytest for repository-level static validation only
+- No application backend, database, framework, package manager, or runtime build step
+
+## Source-of-truth files
+
+- `project.md` — approved product scope and acceptance criteria
+- `STATUS.md` — current implementation state and handoff notes
+- `CHIPv.4.2.html` and `CHIPv.4.2-tutorial.html` — untouched source applications
+- `original/` — byte-identical preserved copies of those source applications
 
 ## Workflow rules
 
-1. **Start of session:** read STATUS.md to learn current phase, what's done, and what's next. Do not re-derive project state from scratch.
-2. **Scope:** work only on the task given. If you notice unrelated problems, list them in STATUS.md under "Noticed" — do not fix them unprompted.
-3. **Tests are the gate.** Run `pytest` before declaring any task complete. A task with failing tests is not done. New behavior gets a new test.
-4. **End of session (every time):**
-   - Update STATUS.md: what changed, what's next, any decisions made
-   - Commit with a clear message
-   - Leave the repo in a state a fresh session can pick up with zero conversation context
+1. Read `STATUS.md` and `project.md` at the start of every session.
+2. Keep desktop rendering of the original CHIP applications as the protected baseline.
+3. Make delivery-layer changes in `index.html`, wrapper pages, or `assets/` before considering edits to the original source files.
+4. Use relative URLs so the site works under a GitHub Pages project path.
+5. Run `pytest` before declaring work complete.
+6. Update `STATUS.md` at the end of every session with completed work, remaining work, decisions, and validation results.
+7. Keep commits focused and leave enough context for another agent to continue without conversation history.
 
 ## Code style
 
-- Minimal code that solves the stated problem. Reuse existing functions before writing new ones. Stdlib before dependencies. One line if one line works.
-- Never cut: input validation at trust boundaries, error handling around I/O, anything security-relevant.
-- No speculative abstractions. No "manager" or "handler" classes for things that happen once.
-- Match the existing style of the file being edited.
+- Prefer plain, dependency-free browser JavaScript.
+- Use semantic HTML and accessible names for new controls.
+- Scope mobile CSS with the existing 820px breakpoint and/or `data-device="mobile"`.
+- Avoid desktop overrides unless required to correct a functional defect.
+- Use `try/catch` around browser storage and same-origin iframe access boundaries.
+- Do not introduce speculative abstractions or a frontend framework.
 
-## Data hygiene (non-negotiable)
+## Data and design hygiene
 
-- No real client data, campaign data, credentials, or company-internal exports in this repo. Ever.
-- Test fixtures use synthetic data only (see `tests/fixtures/`).
-- If a task requires realistic data shapes, generate fake data matching the schema.
-
-## Phase discipline
-
-Work is organized in phases (see STATUS.md). A phase ends with: tests passing, STATUS.md updated, changes committed. Prefer finishing a phase over starting the next one.
+- The checked-in application contains illustrative demonstration data; do not replace it with real client or campaign exports.
+- Do not add credentials, private endpoints, or analytics tokens.
+- Do not change existing dashboard copy, calculations, map appearance, desktop colors, typography, or interaction patterns unless the user explicitly expands scope.

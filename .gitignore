@@ -1,1 +1,23 @@
+# Operating-system and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
 
+# Python test tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local secrets and environment files
+.env
+*.env
+*credentials*
+*secret*
+
+# Local Pages build output
+_site/

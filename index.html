@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" data-visitor-state="first-time">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#001b2e">
+  <meta name="description" content="Choose between the full CHIP market visualizer and a guided tutorial.">
+  <title>CHIP · Choose your experience</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/css/landing.css">
+  <script src="./assets/js/tutorial-state.js" defer></script>
+  <script src="./assets/js/landing.js" defer></script>
+</head>
+<body>
+  <main class="landing" aria-labelledby="landing-title">
+    <header class="landing__header">
+      <a class="brand" href="./index.html" aria-label="CHIP home">
+        <span class="brand__mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span class="brand__wordmark">CHIP</span>
+      </a>
+
+      <div class="landing__intro">
+        <p class="landing__eyebrow">Spectrum Reach market intelligence</p>
+        <h1 id="landing-title">Choose how you want to explore.</h1>
+        <p class="landing__summary">
+          Open the Cleveland–Akron market visualizer directly or take a guided walkthrough of its controls and opportunity insights.
+        </p>
+      </div>
+    </header>
+
+    <section class="experience-grid" aria-label="Available CHIP experiences">
+      <article class="experience-card is-recommended" data-experience="tutorial">
+        <div class="experience-card__topline">
+          <span class="experience-card__number" aria-hidden="true">01</span>
+          <span class="experience-card__recommendation" id="tutorial-recommendation">Recommended for first-time visitors</span>
+        </div>
+        <div class="experience-card__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3 4.5 7.25 12 11.5l7.5-4.25L12 3Z"/>
+            <path d="m4.5 11.25 7.5 4.25 7.5-4.25"/>
+            <path d="m4.5 15.25 7.5 4.25 7.5-4.25"/>
+          </svg>
+        </div>
+        <div>
+          <p class="experience-card__kicker">Guided experience</p>
+          <h2>Take the Guided Tour</h2>
+          <p>A guided walkthrough of the dashboard, controls, and market-opportunity insights.</p>
+        </div>
+        <a class="experience-card__action" id="tutorial-action" href="./tutorial.html" aria-describedby="tutorial-recommendation">
+          <span>Start Guided Tour</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </article>
+
+      <article class="experience-card" data-experience="dashboard">
+        <div class="experience-card__topline">
+          <span class="experience-card__number" aria-hidden="true">02</span>
+          <span class="experience-card__recommendation" id="dashboard-recommendation">Open without the walkthrough</span>
+        </div>
+        <div class="experience-card__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="3"/>
+            <path d="M8 16V11M12 16V7M16 16v-3"/>
+          </svg>
+        </div>
+        <div>
+          <p class="experience-card__kicker">Full dashboard</p>
+          <h2>Explore the Dashboard</h2>
+          <p>Open the complete interactive CHIP experience immediately and explore at your own pace.</p>
+        </div>
+        <a class="experience-card__action" id="dashboard-action" href="./app.html" aria-describedby="dashboard-recommendation">
+          <span>Open Dashboard</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </article>
+    </section>
+
+    <footer class="landing__footer">
+      <p><span class="status-dot" aria-hidden="true"></span>Illustrative market and sales data for demonstration purposes.</p>
+      <p class="landing__state" id="visitor-state" aria-live="polite">The guided tour is recommended for your first visit.</p>
+    </footer>
+  </main>
+
+  <noscript>
+    <p class="noscript-note">JavaScript is disabled. Both experiences remain available, but the recommendation cannot remember tutorial completion.</p>
+  </noscript>
+</body>
+</html>
