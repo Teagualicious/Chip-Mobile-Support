@@ -54,6 +54,51 @@ def test_original_files_are_preserved_byte_for_byte() -> None:
         assert (ROOT / source).read_bytes() == (ROOT / preserved).read_bytes()
 
 
+def test_business_verticals_use_the_consolidated_taxonomy() -> None:
+    allowed = {
+        "Adult",
+        "Auto Aftermarket",
+        "Auto Dealer",
+        "Auto Dealer Association",
+        "Auto Manufacturer",
+        "Automall/Used Cars",
+        "Education",
+        "Financial Services and Insurance",
+        "Government and Military",
+        "Grocery/Food and Beverage",
+        "Healthcare",
+        "Home Improvement",
+        "Legal Services",
+        "Marketing",
+        "Media",
+        "Pharma",
+        "Political",
+        "Real Estate",
+        "Restaurant",
+        "Retail",
+        "RV/Cycles Vehicles",
+        "Telecommunications",
+        "Travel/Leisure/Entertainment",
+    }
+    expected_populated = {
+        "Auto Aftermarket",
+        "Auto Dealer",
+        "Automall/Used Cars",
+        "Grocery/Food and Beverage",
+        "Healthcare",
+        "Home Improvement",
+        "Restaurant",
+        "Retail",
+    }
+    vertical_sets = []
+    for path in ("CHIPv.4.2.html", "CHIPv.4.2-tutorial.html"):
+        verticals = set(re.findall(r'"vertical":"([^"]+)"', read(path)))
+        assert verticals <= allowed
+        assert verticals == expected_populated
+        vertical_sets.append(verticals)
+    assert vertical_sets[0] == vertical_sets[1]
+
+
 def test_landing_page_links_to_both_experiences() -> None:
     html = read("index.html")
     assert 'href="./app.html"' in html
