@@ -522,6 +522,17 @@
       doc.body.appendChild(helperScript);
     }
 
+    function showDetailSample() {
+      try {
+        if (frame.contentWindow.__chipTourShowDetailSample()) {
+          autoSelectedCounty = true;
+        }
+      } catch (error) {
+        // Without a sample selection the tour falls back to its original
+        // app-bar highlight for this step.
+      }
+    }
+
     function clearDetailSample() {
       doc.body.classList.remove("chip-tour-detail-step");
       if (!autoSelectedCounty) {
@@ -575,7 +586,20 @@
         }
         const margin = 14;
         const top = Math.min(Math.max(styleTop, margin), Math.max(margin, win.innerHeight - rect.height - margin));
-        const left = Math.min(Math.max(styleLeft, margin), Math.max(margin, win.innerWidth - rect.width - margin));
+        let left = Math.min(Math.max(styleLeft, margin), Math.max(margin, win.innerWidth - rect.width - margin));
+
+        // When the detail panel is open (the detail tour step), the tour's
+        // fallback placement parks the card on top of it. Slide the card to
+        // the panel's left when there is room so the panel stays readable.
+        const detail = doc.getElementById("detail");
+        if (detail && detail.classList.contains("open")) {
+          const detailRect = detail.getBoundingClientRect();
+          const overlaps = left + rect.width > detailRect.left && left < detailRect.right &&
+            top + rect.height > detailRect.top && top < detailRect.bottom;
+          if (overlaps && detailRect.left - rect.width - 18 >= margin) {
+            left = detailRect.left - rect.width - 18;
+          }
+        }
         if (Math.abs(top - styleTop) > 1) {
           card.style.top = Math.round(top) + "px";
         }
@@ -610,7 +634,14 @@
 
       if (!mobile) {
         doc.body.style.removeProperty("--chip-tour-card-height");
-        clearDetailSample();
+        // Desktop keeps its own layout for the detail panel, so only the
+        // sample selection applies — not the mobile card repositioning.
+        doc.body.classList.remove("chip-tour-detail-step");
+        if (stepIndex === detailStepIndex) {
+          showDetailSample();
+        } else {
+          clearDetailSample();
+        }
         if (drawerTarget) {
           window.cancelAnimationFrame(layoutFrameId);
           layoutFrameId = window.requestAnimationFrame(function revealDesktopTarget() {
@@ -623,6 +654,7 @@
           });
         }
         scheduleCardClamp();
+        requestTourRerender();
         return;
       }
 
@@ -638,14 +670,7 @@
 
       if (stepIndex === detailStepIndex) {
         doc.body.classList.add("chip-tour-detail-step");
-        try {
-          if (frame.contentWindow.__chipTourShowDetailSample()) {
-            autoSelectedCounty = true;
-          }
-        } catch (error) {
-          // Without a sample selection the tour falls back to its original
-          // app-bar highlight for this step.
-        }
+        showDetailSample();
       } else {
         clearDetailSample();
       }
