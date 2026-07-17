@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="112" height="112" viewBox="0 0 112 112" role="img" aria-label="CHIP logo">
+  <rect width="112" height="112" rx="24" fill="#001b2e"/>
+  <rect x="20" y="62" width="14" height="30" rx="4" fill="#27b7df"/>
+  <rect x="40" y="46" width="14" height="46" rx="4" fill="#008bd2"/>
+  <rect x="60" y="28" width="14" height="64" rx="4" fill="#58c8b0"/>
+  <path d="M80 22 98 33 80 44 Z" fill="#f7fbff"/>
+</svg>
