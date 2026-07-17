@@ -141,6 +141,58 @@
     doc.body.appendChild(script);
   }
 
+  function applyMobileLabelTuning(doc) {
+    if (detectDeviceMode() !== "mobile" || doc.getElementById("chip-mobile-label-tuning")) {
+      return;
+    }
+
+    // The original `positionLabels` hides every county label below zoom 7.2
+    // because small counties collide at desktop label sizes. The mobile
+    // full-market view sits near zoom 6.7, so the default view showed no
+    // labels at all. Keep labels visible while zooming out, growing them
+    // modestly for readability, and only hide once the market itself is too
+    // small to label. `map`, `positionLabels`, and the label elements live in
+    // the child document, so the tuner runs as an injected script. Wrapping
+    // `positionLabels` covers handlers registered after this script runs;
+    // the extra map listeners cover handlers registered before it.
+    const script = doc.createElement("script");
+    script.id = "chip-mobile-label-tuning";
+    script.textContent = [
+      "(function chipMobileLabelTuning() {",
+      "  try {",
+      "    if (typeof map === \"undefined\" || !map || typeof map.on !== \"function\") { return; }",
+      "    if (typeof positionLabels !== \"function\") { return; }",
+      "    var BASE_ZOOM = 7.2;",
+      "    var MIN_ZOOM = 5.2;",
+      "    var MAX_SIZE = 13.5;",
+      "    function tuneLabels() {",
+      "      var z = map.getZoom();",
+      "      var labels = document.querySelectorAll(\"#labels .clab\");",
+      "      if (!labels.length) { return; }",
+      "      var boosted = z < BASE_ZOOM;",
+      "      var visible = z >= MIN_ZOOM;",
+      "      var size = Math.min(MAX_SIZE, 11 + (BASE_ZOOM - z) * 0.9);",
+      "      for (var i = 0; i < labels.length; i++) {",
+      "        if (!boosted || !visible) { labels[i].style.removeProperty(\"font-size\"); }",
+      "        if (!boosted) { continue; }",
+      "        labels[i].style.opacity = visible ? 1 : 0;",
+      "        if (visible) {",
+      "          /* The mobile stylesheet pins .clab to 11px with !important. */",
+      "          labels[i].style.setProperty(\"font-size\", size.toFixed(1) + \"px\", \"important\");",
+      "        }",
+      "      }",
+      "    }",
+      "    var originalPositionLabels = positionLabels;",
+      "    positionLabels = function () { originalPositionLabels(); tuneLabels(); };",
+      "    map.on(\"move\", tuneLabels);",
+      "    map.on(\"zoom\", tuneLabels);",
+      "    tuneLabels();",
+      "  } catch (error) {}",
+      "})();",
+    ].join("\n");
+    doc.body.appendChild(script);
+  }
+
   function createBackdrop(doc) {
     let backdrop = doc.querySelector(".chip-mobile-backdrop");
     if (backdrop) {
@@ -611,6 +663,7 @@
     injectMobileStyles(childDocument);
     setDeviceMode();
     applyMobileMapFit(childDocument);
+    applyMobileLabelTuning(childDocument);
     enhanceControls(childDocument);
     enhanceDetails(childDocument);
     setupTourMobileLayout(childDocument);
