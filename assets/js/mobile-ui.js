@@ -112,6 +112,35 @@
     doc.head.appendChild(link);
   }
 
+  function applyMobileMapFit(doc) {
+    if (detectDeviceMode() !== "mobile" || doc.getElementById("chip-mobile-map-fit")) {
+      return;
+    }
+
+    // The original applications fit the market bounds with 360-380px of side
+    // padding reserved for the desktop panels. On narrow viewports that
+    // padding exceeds the map size, MapLibre cannot compute the camera, and
+    // the map falls back to a world view. `map` and `BOUNDS` are top-level
+    // lexical bindings in the original inline scripts, so the refit has to
+    // run as a script inside the child document rather than through
+    // `contentWindow` property access.
+    const script = doc.createElement("script");
+    script.id = "chip-mobile-map-fit";
+    script.textContent = [
+      "(function chipMobileMapFit() {",
+      "  try {",
+      "    if (typeof map === \"undefined\" || typeof BOUNDS === \"undefined\") { return; }",
+      "    if (!map || typeof map.fitBounds !== \"function\") { return; }",
+      "    map.fitBounds(BOUNDS, {",
+      "      padding: { top: 76, right: 28, bottom: 96, left: 28 },",
+      "      duration: 0",
+      "    });",
+      "  } catch (error) {}",
+      "})();",
+    ].join("\n");
+    doc.body.appendChild(script);
+  }
+
   function createBackdrop(doc) {
     let backdrop = doc.querySelector(".chip-mobile-backdrop");
     if (backdrop) {
@@ -397,6 +426,86 @@
     });
   }
 
+  function setupTourMobileLayout(doc) {
+    const tourRoot = doc.getElementById("tourRoot");
+    const kicker = doc.getElementById("tourKicker");
+    const controls = doc.getElementById("ctrl") || doc.querySelector(".ctrl");
+    if (!tourRoot || !kicker || !controls) {
+      return;
+    }
+
+    // Tour steps that highlight controls living inside the mobile drawer.
+    // Mirrors the frozen step order in CHIPv.4.2-tutorial.html; unmatched
+    // selectors are simply ignored if the source ever changes.
+    const drawerStepTargets = [".hdr", "#modeSeg", ".field", "#dmaClientFilters"];
+    let autoOpenedDrawer = false;
+    let rerenderTimer = 0;
+
+    function requestTourRerender() {
+      window.clearTimeout(rerenderTimer);
+      rerenderTimer = window.setTimeout(function rerenderTour() {
+        try {
+          frame.contentWindow.dispatchEvent(new Event("resize"));
+        } catch (error) {
+          // The tour re-renders on its own resize listener; losing one
+          // refresh only delays the focus ring, so failures are safe.
+        }
+      }, 260);
+    }
+
+    function syncTourState() {
+      const mobile = detectDeviceMode() === "mobile";
+      const active = !tourRoot.hidden;
+      doc.body.classList.toggle("chip-tour-active", mobile && active);
+
+      if (!mobile) {
+        return;
+      }
+
+      if (!active) {
+        if (autoOpenedDrawer) {
+          autoOpenedDrawer = false;
+          controls.classList.remove("open");
+        }
+        return;
+      }
+
+      const stepMatch = /(\d+)/.exec(kicker.textContent || "");
+      const stepIndex = stepMatch ? Number(stepMatch[1]) - 1 : -1;
+      const selector = stepIndex >= 0 && stepIndex < drawerStepTargets.length
+        ? drawerStepTargets[stepIndex]
+        : null;
+      const target = selector ? doc.querySelector(selector) : null;
+
+      if (target && target.closest("#ctrl, .ctrl")) {
+        if (!controls.classList.contains("open")) {
+          controls.classList.add("open");
+          autoOpenedDrawer = true;
+        }
+        try {
+          target.scrollIntoView({ block: "center" });
+        } catch (error) {
+          target.scrollIntoView();
+        }
+      } else if (autoOpenedDrawer) {
+        autoOpenedDrawer = false;
+        controls.classList.remove("open");
+      }
+
+      requestTourRerender();
+    }
+
+    const observer = new MutationObserver(syncTourState);
+    observer.observe(tourRoot, { attributes: true, attributeFilter: ["hidden"] });
+    observer.observe(kicker, { childList: true, characterData: true, subtree: true });
+    syncTourState();
+
+    cleanupCallbacks.push(function cleanupTourLayout() {
+      observer.disconnect();
+      window.clearTimeout(rerenderTimer);
+    });
+  }
+
   function cleanupFrameEnhancements() {
     cleanupCallbacks.forEach(function runCleanup(cleanup) {
       try {
@@ -425,8 +534,10 @@
     injectViewportMetadata(childDocument);
     injectMobileStyles(childDocument);
     setDeviceMode();
+    applyMobileMapFit(childDocument);
     enhanceControls(childDocument);
     enhanceDetails(childDocument);
+    setupTourMobileLayout(childDocument);
     setupTutorialCompletion(childDocument);
     scheduleMapResize();
   }

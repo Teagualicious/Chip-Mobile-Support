@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase 1 — GitHub Pages delivery layer implemented; review and deployed-device QA pending
+Phase 2 — post-merge mobile QA fixes for the tutorial layout and initial map zoom
 
 ## Done
 
@@ -20,13 +20,16 @@ Phase 1 — GitHub Pages delivery layer implemented; review and deployed-device 
 - Replaced the Python-template documentation with project-specific `README.md` and `CLAUDE.md` guidance.
 - Replaced the release-oriented workflow with static validation and added a GitHub Pages Actions deployment workflow.
 - Added repository-level static tests in `tests/test_site.py`.
-- Opened draft pull request #1 from `agent/github-pages-mobile-demo` into `main`.
+- Opened draft pull request #1 from `agent/github-pages-mobile-demo` into `main`; merged to `main`.
 - Validation completed: local `pytest -q` passed 11 tests, all three browser scripts passed `node --check`, and pull-request CI run #7 completed successfully.
+- Fixed the mobile initial map view (branch `claude/mobile-tutorial-ui-bugs-6yi1qf`): the original apps fit `BOUNDS` with 360/380px desktop-panel padding, which exceeds a phone-width map and made MapLibre fall back to a zoom-0 world view. `mobile-ui.js` now injects a one-shot script into the child document (needed because `map`/`BOUNDS` are top-level lexical bindings, not `window` properties) that re-fits the market bounds with phone-sized padding on mobile only.
+- Fixed the mobile tutorial layout (same branch): the tour card is now a fixed bottom sheet on mobile (safe-area aware, scrollable copy, 44px buttons always on screen), and `mobile-ui.js` auto-opens the controls drawer during tour steps 1-4 (whose targets live inside the off-canvas drawer, previously producing a sliver focus ring at the left edge and a card cut off below the viewport), scrolls the step target into view, re-renders the tour after the drawer transition, and closes the drawer for the map step and at tour end. The drawer height is capped while the tour is open so drawer and card do not overlap.
+- Validated the fixes in headless Chromium (iPhone 13 viewport): map zoom 6.66 centered on Cleveland-Akron on both `tutorial.html` and `app.html`; tour steps 1-5 all render the card fully on screen with Next reachable; drawer opens/closes per step; desktop run (1440x900) confirmed unchanged behavior (no injected fit, original camera and card positioning).
 
 ## Next up
 
-1. Review draft pull request #1 and inspect the Pages site after merge to `main`.
-2. Complete visual QA on iPhone Safari, Android Chrome, iPad Safari, and representative desktop sizes.
+1. Re-verify the tutorial and initial zoom on physical iPhone Safari and Android Chrome after this branch deploys.
+2. Complete remaining visual QA on iPad Safari and representative desktop sizes.
 3. Record any device-specific defects here before making follow-up changes.
 
 ## Decisions log
@@ -36,6 +39,7 @@ Phase 1 — GitHub Pages delivery layer implemented; review and deployed-device 
 - 2026-07-17 — Recommend rather than force the tutorial — preserves presenter and returning-user control.
 - 2026-07-17 — Deploy through GitHub Actions — matches the repository's configured GitHub Pages source.
 - 2026-07-17 — Retain pytest only for static repository validation — no Python runs in the deployed application.
+- 2026-07-17 — Fix the mobile map view and tutorial layout entirely in the delivery layer (`assets/js/mobile-ui.js`, `assets/css/mobile.css`) — the original HTML files stay byte-identical. The tour-step drawer targets (`.hdr`, `#modeSeg`, `.field`, `#dmaClientFilters`) are mirrored in `mobile-ui.js`; if the frozen source ever changes step order, unmatched selectors are ignored harmlessly.
 
 ## Noticed
 
