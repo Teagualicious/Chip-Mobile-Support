@@ -188,7 +188,12 @@ def test_mobile_tour_adapts_to_short_screens() -> None:
     assert "width: calc(48vw" in css
     assert 'style.setProperty("--chip-tour-card-height"' in script
     assert 'scrollIntoView({ block: "center", inline: "nearest" })' in script
-    assert script.count("new frame.contentWindow.MutationObserver") == 4
+    # Observers must come from the child window so they survive iframe
+    # reloads: controls, detail, tutorial-completion, tour state, tour card.
+    assert script.count("new frame.contentWindow.MutationObserver") == 5
+    # Desktop tour responsiveness: reveal panel targets and clamp the card.
+    assert 'scrollIntoView({ block: "nearest", inline: "nearest" })' in script
+    assert "scheduleCardClamp" in script
 
 
 def test_pages_workflow_uses_official_actions_and_validates_first() -> None:
