@@ -256,7 +256,7 @@
     doc.addEventListener("keydown", handleEscape);
     doc.addEventListener("keydown", handleFocusTrap);
 
-    const observer = new MutationObserver(syncOpenState);
+    const observer = new frame.contentWindow.MutationObserver(syncOpenState);
     observer.observe(controls, { attributes: true, attributeFilter: ["class"] });
 
     if (detectDeviceMode() === "mobile") {
@@ -285,7 +285,7 @@
     detail.setAttribute("aria-modal", "false");
 
     const controls = doc.getElementById("ctrl") || doc.querySelector(".ctrl");
-    const observer = new MutationObserver(function handleDetailChange() {
+    const observer = new frame.contentWindow.MutationObserver(function handleDetailChange() {
       const computed = frame.contentWindow.getComputedStyle(detail);
       const visible = computed.display !== "none" && computed.visibility !== "hidden";
       if (visible && controls && detectDeviceMode() === "mobile") {
@@ -404,7 +404,7 @@
     doc.addEventListener("tour:complete", handleExplicitCompletionEvent);
     doc.addEventListener("chip:tutorial-complete", handleExplicitCompletionEvent);
 
-    const observer = new MutationObserver(checkForClosedTour);
+    const observer = new frame.contentWindow.MutationObserver(checkForClosedTour);
     if (doc.body) {
       observer.observe(doc.body, {
         subtree: true,
@@ -429,8 +429,9 @@
   function setupTourMobileLayout(doc) {
     const tourRoot = doc.getElementById("tourRoot");
     const kicker = doc.getElementById("tourKicker");
+    const card = tourRoot && tourRoot.querySelector(".tour-card");
     const controls = doc.getElementById("ctrl") || doc.querySelector(".ctrl");
-    if (!tourRoot || !kicker || !controls) {
+    if (!tourRoot || !kicker || !card || !controls) {
       return;
     }
 
@@ -440,6 +441,7 @@
     const drawerStepTargets = [".hdr", "#modeSeg", ".field", "#dmaClientFilters"];
     let autoOpenedDrawer = false;
     let rerenderTimer = 0;
+    let layoutFrameId = 0;
 
     function requestTourRerender() {
       window.clearTimeout(rerenderTimer);
@@ -459,10 +461,12 @@
       doc.body.classList.toggle("chip-tour-active", mobile && active);
 
       if (!mobile) {
+        doc.body.style.removeProperty("--chip-tour-card-height");
         return;
       }
 
       if (!active) {
+        doc.body.style.removeProperty("--chip-tour-card-height");
         if (autoOpenedDrawer) {
           autoOpenedDrawer = false;
           controls.classList.remove("open");
@@ -482,11 +486,19 @@
           controls.classList.add("open");
           autoOpenedDrawer = true;
         }
-        try {
-          target.scrollIntoView({ block: "center" });
-        } catch (error) {
-          target.scrollIntoView();
-        }
+        window.cancelAnimationFrame(layoutFrameId);
+        layoutFrameId = window.requestAnimationFrame(function fitTourAndTarget() {
+          const cardHeight = Math.ceil(card.getBoundingClientRect().height);
+          doc.body.style.setProperty("--chip-tour-card-height", cardHeight + "px");
+          layoutFrameId = window.requestAnimationFrame(function revealTourTarget() {
+            try {
+              target.scrollIntoView({ block: "center", inline: "nearest" });
+            } catch (error) {
+              target.scrollIntoView();
+            }
+            requestTourRerender();
+          });
+        });
       } else if (autoOpenedDrawer) {
         autoOpenedDrawer = false;
         controls.classList.remove("open");
@@ -495,7 +507,7 @@
       requestTourRerender();
     }
 
-    const observer = new MutationObserver(syncTourState);
+    const observer = new frame.contentWindow.MutationObserver(syncTourState);
     observer.observe(tourRoot, { attributes: true, attributeFilter: ["hidden"] });
     observer.observe(kicker, { childList: true, characterData: true, subtree: true });
     syncTourState();
@@ -503,6 +515,8 @@
     cleanupCallbacks.push(function cleanupTourLayout() {
       observer.disconnect();
       window.clearTimeout(rerenderTimer);
+      window.cancelAnimationFrame(layoutFrameId);
+      doc.body.style.removeProperty("--chip-tour-card-height");
     });
   }
 
