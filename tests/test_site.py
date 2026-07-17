@@ -127,6 +127,18 @@ def test_mobile_css_is_scoped_and_safe_area_aware() -> None:
     assert "safe-area-inset-bottom" in css
 
 
+def test_mobile_tour_adapts_to_short_screens() -> None:
+    css = read("assets/css/mobile.css")
+    script = read("assets/js/mobile-ui.js")
+    assert "--chip-tour-card-height" in css
+    assert "max-height: 540px" in css
+    assert "min-width: 520px" in css
+    assert "width: calc(48vw" in css
+    assert 'style.setProperty("--chip-tour-card-height"' in script
+    assert 'scrollIntoView({ block: "center", inline: "nearest" })' in script
+    assert script.count("new frame.contentWindow.MutationObserver") == 4
+
+
 def test_pages_workflow_uses_official_actions_and_validates_first() -> None:
     workflow = read(".github/workflows/pages.yml")
     required = {
