@@ -170,15 +170,6 @@
     toggle.setAttribute("aria-expanded", "false");
 
     const backdrop = createBackdrop(doc);
-    let closeButton = controls.querySelector(".chip-mobile-close");
-    if (!closeButton) {
-      closeButton = doc.createElement("button");
-      closeButton.className = "chip-mobile-close";
-      closeButton.type = "button";
-      closeButton.setAttribute("aria-label", "Close controls");
-      closeButton.innerHTML = '<span aria-hidden="true">×</span>';
-      controls.insertBefore(closeButton, controls.firstChild);
-    }
 
     function isOpen() {
       return controls.classList.contains("open");
@@ -247,9 +238,6 @@
     }
 
     toggle.addEventListener("click", handleToggleFallback);
-    closeButton.addEventListener("click", function handleCloseButton() {
-      closeControls({ restoreFocus: true });
-    });
     backdrop.addEventListener("click", function handleBackdrop() {
       closeControls({ restoreFocus: true });
     });

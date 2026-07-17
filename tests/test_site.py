@@ -161,6 +161,13 @@ def test_mobile_layer_contains_required_detection_and_controls_contracts() -> No
     assert not missing, f"Missing mobile behavior contracts: {missing}"
 
 
+def test_mobile_layer_does_not_inject_a_controls_close_button() -> None:
+    script = read("assets/js/mobile-ui.js")
+    css = read("assets/css/mobile.css")
+    assert "chip-mobile-close" not in script
+    assert "chip-mobile-close" not in css
+
+
 def test_mobile_css_is_scoped_and_safe_area_aware() -> None:
     css = read("assets/css/mobile.css")
     assert "max-width: 820px" in css
