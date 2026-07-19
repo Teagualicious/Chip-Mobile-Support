@@ -395,6 +395,60 @@
     });
   }
 
+  function enhanceNavigation(doc) {
+    const homeUrl = new URL("./index.html", window.location.href).href;
+
+    // The brand becomes a link back to the landing page. Approved as a
+    // desktop-visible affordance: no resting visual change — cursor,
+    // native tooltip, and a focus ring only (see mobile.css).
+    const brand = doc.querySelector(".appbar__brand");
+    if (brand && !brand.dataset.chipHome) {
+      brand.dataset.chipHome = "true";
+      brand.setAttribute("role", "link");
+      brand.setAttribute("tabindex", "0");
+      brand.setAttribute("title", "Back to experience choices");
+      brand.addEventListener("click", function handleBrandClick() {
+        try {
+          window.top.location.href = homeUrl;
+        } catch (error) {
+          window.location.href = homeUrl;
+        }
+      });
+      brand.addEventListener("keydown", function handleBrandKey(event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          brand.click();
+        }
+      });
+    }
+
+    // Visible way home on phones, in the app bar space freed by the hidden
+    // title and nav.
+    const appbar = doc.querySelector(".appbar");
+    if (appbar && !appbar.querySelector(".chip-home-link")) {
+      const home = doc.createElement("a");
+      home.className = "chip-home-link";
+      home.href = "index.html";
+      home.target = "_top";
+      home.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 3l9 8M6 10v10h12V10"/></svg>' +
+        "<span>Home</span>";
+      appbar.appendChild(home);
+    }
+
+    // Desktop dashboard gains the tour launcher the tutorial page already
+    // has; the mobile drawer carries its own replay link instead.
+    if (pageMode === "dashboard" && !doc.querySelector(".chip-tour-launch")) {
+      const launch = doc.createElement("a");
+      launch.className = "chip-tour-launch";
+      launch.href = "tutorial.html";
+      launch.target = "_top";
+      launch.setAttribute("aria-label", "Take the guided tour");
+      launch.innerHTML = "?&nbsp;&nbsp;Take the tour";
+      doc.body.appendChild(launch);
+    }
+  }
+
   function enhanceMapState(doc) {
     const toggle = doc.getElementById("mtoggle") || doc.querySelector(".mtoggle");
     const metricSelect = doc.getElementById("metric");
@@ -1022,6 +1076,7 @@
     applyMobileMapFit(childDocument);
     applyMobileLabelTuning(childDocument);
     enhanceControls(childDocument);
+    enhanceNavigation(childDocument);
     enhanceMapState(childDocument);
     enhanceDetails(childDocument);
     setupTourMobileLayout(childDocument);

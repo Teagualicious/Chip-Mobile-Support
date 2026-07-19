@@ -15,8 +15,53 @@
 .chip-drawer-note,
 .chip-map-legend,
 .chip-filter-badge,
-.chip-sheet-grab {
+.chip-sheet-grab,
+.chip-home-link {
   display: none;
+}
+
+/*
+ * Approved desktop-visible navigation affordances (UI review 2026-07-19).
+ * The brand becomes a link home with no resting visual change — pointer
+ * cursor, native tooltip (title attribute), and a focus ring only.
+ */
+.appbar__brand[data-chip-home] {
+  cursor: pointer;
+}
+
+.appbar__brand[data-chip-home]:focus-visible {
+  outline: 3px solid rgba(39, 183, 223, 0.9);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/*
+ * "? Take the tour" launcher on the dashboard, cloned from the tutorial
+ * page's own .tour-launch styling so the pair reads as one system.
+ */
+.chip-tour-launch {
+  position: fixed;
+  z-index: 20;
+  right: 18px;
+  bottom: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: #0d1b2a;
+  color: #fff;
+  box-shadow: 0 8px 26px rgba(3, 10, 20, 0.4);
+  padding: 10px 16px;
+  font: 700 12px "Inter", sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.chip-tour-launch:hover {
+  background: #1a3350;
+}
+
+.chip-tour-launch:focus-visible {
+  outline: 3px solid #66bfff;
+  outline-offset: 2px;
 }
 
 @media (max-width: 820px), (pointer: coarse) and (max-width: 1100px) {
@@ -323,6 +368,43 @@
 
   html[data-device="mobile"] .chip-filter-badge[hidden] {
     display: none;
+  }
+
+  /*
+   * Mobile navigation. The app bar hides its title and nav at phone widths,
+   * leaving dead space; the Home chip fills it with a visible way back to
+   * the landing page. The desktop tour launcher yields to the drawer's
+   * "Replay the guided tour" link on mobile.
+   */
+  html[data-device="mobile"] .chip-home-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    color: #e8f3fa;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    touch-action: manipulation;
+  }
+
+  html[data-device="mobile"] .chip-home-link svg {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  html[data-device="mobile"] .chip-tour-launch {
+    display: none !important;
   }
 
   html[data-device="mobile"] .chip-mobile-backdrop {

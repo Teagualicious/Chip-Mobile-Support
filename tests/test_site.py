@@ -208,6 +208,21 @@ def test_mobile_detail_sheet_opens_half_height_with_grab_handle() -> None:
     assert re.search(r"html\[data-device=\"mobile\"\] \.detail \{[^}]*display", css) is None
 
 
+def test_navigation_affordances_link_home_and_into_the_tour() -> None:
+    # Approved desktop-visible additions from the 2026-07-19 UI review: the
+    # brand links home with no resting visual change, phones get a Home chip
+    # in the app bar, and the dashboard gains the tutorial's tour launcher.
+    script = read("assets/js/mobile-ui.js")
+    css = read("assets/css/mobile.css")
+    assert 'brand.setAttribute("role", "link")' in script
+    assert "chip-home-link" in script and "chip-home-link" in css
+    assert "chip-tour-launch" in script and "chip-tour-launch" in css
+    # Everything that leaves the iframe must target the top window.
+    assert script.count('target = "_top"') >= 3
+    # The launcher is desktop-only; mobile uses the drawer's replay link.
+    assert ".chip-tour-launch {\n    display: none !important;\n  }" in css
+
+
 def test_mobile_css_is_scoped_and_safe_area_aware() -> None:
     css = read("assets/css/mobile.css")
     assert "max-width: 820px" in css
