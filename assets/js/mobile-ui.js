@@ -525,11 +525,77 @@
     }
     detail.setAttribute("aria-modal", "false");
 
+    // Half-sheet grab handle. The sheet opens at half height so the tapped
+    // county stays visible; the handle (tap, keyboard, or a short drag)
+    // expands it to near-full height. Sits outside .detail__scroll, so the
+    // app's innerHTML re-renders never remove it.
+    let grab = detail.querySelector(".chip-sheet-grab");
+    if (!grab) {
+      grab = doc.createElement("button");
+      grab.type = "button";
+      grab.className = "chip-sheet-grab";
+      grab.setAttribute("aria-label", "Expand county details");
+      grab.setAttribute("aria-expanded", "false");
+      detail.insertBefore(grab, detail.firstChild);
+    }
+
+    function setSheetTall(tall) {
+      detail.classList.toggle("chip-sheet-tall", tall);
+      grab.setAttribute("aria-expanded", String(tall));
+      grab.setAttribute("aria-label", tall ? "Collapse county details" : "Expand county details");
+      scheduleMapResize();
+    }
+
+    let dragStartY = null;
+    let dragConsumed = false;
+
+    function handleGrabPointerDown(event) {
+      dragStartY = event.clientY;
+    }
+
+    function handleGrabPointerUp(event) {
+      if (dragStartY === null) {
+        return;
+      }
+      const delta = event.clientY - dragStartY;
+      dragStartY = null;
+      if (Math.abs(delta) >= 24) {
+        dragConsumed = true;
+        setSheetTall(delta < 0);
+        // The suppressing click (if any) fires before this macrotask, so a
+        // drag that ends without a click cannot swallow the next tap.
+        window.setTimeout(function clearDragConsumed() {
+          dragConsumed = false;
+        }, 0);
+      }
+    }
+
+    function handleGrabClick() {
+      if (dragConsumed) {
+        dragConsumed = false;
+        return;
+      }
+      setSheetTall(!detail.classList.contains("chip-sheet-tall"));
+    }
+
+    grab.addEventListener("pointerdown", handleGrabPointerDown);
+    grab.addEventListener("pointerup", handleGrabPointerUp);
+    grab.addEventListener("pointercancel", function handleGrabCancel() {
+      dragStartY = null;
+    });
+    grab.addEventListener("click", handleGrabClick);
+
     const controls = doc.getElementById("ctrl") || doc.querySelector(".ctrl");
+    let detailWasVisible = false;
     const observer = new frame.contentWindow.MutationObserver(function handleDetailChange() {
       const computed = frame.contentWindow.getComputedStyle(detail);
       const visible = computed.display !== "none" && computed.visibility !== "hidden";
       doc.body.classList.toggle("chip-detail-open", visible && detectDeviceMode() === "mobile");
+      if (visible && !detailWasVisible) {
+        // Every fresh selection starts at half height.
+        setSheetTall(false);
+      }
+      detailWasVisible = visible;
       if (visible && controls && detectDeviceMode() === "mobile") {
         controls.classList.remove("open");
         doc.body.classList.remove("chip-controls-open");
@@ -543,6 +609,9 @@
     });
     cleanupCallbacks.push(function cleanupDetailObserver() {
       observer.disconnect();
+      grab.removeEventListener("pointerdown", handleGrabPointerDown);
+      grab.removeEventListener("pointerup", handleGrabPointerUp);
+      grab.removeEventListener("click", handleGrabClick);
     });
   }
 

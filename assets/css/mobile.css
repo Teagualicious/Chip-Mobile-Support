@@ -14,7 +14,8 @@
 .chip-drawer-tour,
 .chip-drawer-note,
 .chip-map-legend,
-.chip-filter-badge {
+.chip-filter-badge,
+.chip-sheet-grab {
   display: none;
 }
 
@@ -345,6 +346,12 @@
     transition: opacity 180ms ease;
   }
 
+  /*
+   * County detail sheet. Opens at half height so the selected county stays
+   * visible on the map, with an injected grab handle that expands the sheet
+   * to the previous near-full height. The original toggles visibility with
+   * `.open` (display none/flex), which stays untouched.
+   */
   html[data-device="mobile"] .detail {
     position: absolute !important;
     top: auto !important;
@@ -354,17 +361,48 @@
     z-index: 24 !important;
     width: 100% !important;
     max-width: none !important;
-    max-height: min(78dvh, calc(100dvh - 72px - var(--chip-safe-top))) !important;
+    max-height: min(55dvh, calc(100dvh - 72px - var(--chip-safe-top))) !important;
     border-right: 0 !important;
     border-bottom: 0 !important;
     border-left: 0 !important;
     border-radius: 20px 20px 0 0 !important;
     padding-bottom: var(--chip-safe-bottom) !important;
     overscroll-behavior: contain;
+    transition: max-height 200ms ease;
+  }
+
+  html[data-device="mobile"] .detail.chip-sheet-tall {
+    max-height: min(84dvh, calc(100dvh - 72px - var(--chip-safe-top))) !important;
+  }
+
+  html[data-device="mobile"] .detail .chip-sheet-grab {
+    flex: none;
+    display: block;
+    width: 100%;
+    height: 26px;
+    min-height: 26px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  html[data-device="mobile"] .detail .chip-sheet-grab::after {
+    content: "";
+    display: block;
+    width: 42px;
+    height: 4.5px;
+    margin: 10px auto 0;
+    border-radius: 3px;
+    background: rgba(148, 210, 255, 0.45);
   }
 
   html[data-device="mobile"] .detail__scroll {
-    max-height: inherit !important;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none !important;
     padding-bottom: max(20px, calc(12px + var(--chip-safe-bottom))) !important;
     overflow-y: auto !important;
     overscroll-behavior: contain;
@@ -546,14 +584,15 @@
     padding-left: 17px !important;
   }
 
-  html[data-device="mobile"] .detail {
-    max-height: min(82dvh, calc(100dvh - 68px - var(--chip-safe-top))) !important;
+  html[data-device="mobile"] .detail.chip-sheet-tall {
+    max-height: min(88dvh, calc(100dvh - 68px - var(--chip-safe-top))) !important;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html[data-device="mobile"] .ctrl,
-  html[data-device="mobile"] .chip-mobile-backdrop {
+  html[data-device="mobile"] .chip-mobile-backdrop,
+  html[data-device="mobile"] .detail {
     transition: none !important;
   }
 }

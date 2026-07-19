@@ -194,6 +194,20 @@ def test_mobile_map_view_surfaces_legend_and_filter_state() -> None:
     assert "body.chip-detail-open .chip-map-legend" in css
 
 
+def test_mobile_detail_sheet_opens_half_height_with_grab_handle() -> None:
+    script = read("assets/js/mobile-ui.js")
+    css = read("assets/css/mobile.css")
+    assert "chip-sheet-grab" in script
+    assert "chip-sheet-tall" in script
+    assert "chip-sheet-grab" in css
+    assert ".detail.chip-sheet-tall" in css
+    assert "min(55dvh" in css
+    # Every fresh selection must start at half height, and the original's
+    # display none/flex toggling via `.open` must stay untouched.
+    assert "setSheetTall(false)" in script
+    assert re.search(r"html\[data-device=\"mobile\"\] \.detail \{[^}]*display", css) is None
+
+
 def test_mobile_css_is_scoped_and_safe_area_aware() -> None:
     css = read("assets/css/mobile.css")
     assert "max-width: 820px" in css
