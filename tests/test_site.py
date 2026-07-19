@@ -232,6 +232,18 @@ def test_navigation_affordances_link_home_and_into_the_tour() -> None:
     assert ".chip-tour-launch {\n    display: none !important;\n  }" in css
 
 
+def test_mobile_collapses_the_default_expanded_map_attribution() -> None:
+    # MapLibre's compact attribution pops out expanded by default on
+    # phone-width maps. The delivery layer collapses it to its info toggle
+    # (attribution stays one tap away) and must never override a user's own
+    # explicit toggle.
+    script = read("assets/js/mobile-ui.js")
+    assert "maplibregl-compact-show" in script
+    assert "maplibregl-ctrl-attrib-button" in script
+    assert "chipUserExpanded" in script
+    assert "event.isTrusted" in script
+
+
 def test_mobile_css_is_scoped_and_safe_area_aware() -> None:
     css = read("assets/css/mobile.css")
     assert "max-width: 820px" in css

@@ -193,6 +193,48 @@
     doc.body.appendChild(script);
   }
 
+  function collapseCompactAttribution(doc) {
+    if (!doc || detectDeviceMode() !== "mobile") {
+      return;
+    }
+    // MapLibre's compact attribution starts expanded on phone-width maps —
+    // a "© OpenStreetMap contributors © CARTO" pill across the bottom of
+    // the map. Collapse it to its info toggle via the control's own button
+    // so internal state stays consistent; the required attribution remains
+    // one tap away and a user's explicit toggle is never overridden.
+    doc.querySelectorAll(".maplibregl-ctrl-attrib.maplibregl-compact-show").forEach(
+      function collapseOne(container) {
+        if (container.dataset.chipUserExpanded === "true") {
+          return;
+        }
+        const button = container.querySelector(".maplibregl-ctrl-attrib-button");
+        if (button) {
+          button.click();
+        }
+        container.classList.remove("maplibregl-compact-show");
+      },
+    );
+  }
+
+  function setupAttributionCollapse(doc) {
+    function markUserToggle(event) {
+      if (!event.isTrusted || !(event.target instanceof frame.contentWindow.Element)) {
+        return;
+      }
+      const button = event.target.closest(".maplibregl-ctrl-attrib-button");
+      const container = button && button.closest(".maplibregl-ctrl-attrib");
+      if (container) {
+        container.dataset.chipUserExpanded = "true";
+      }
+    }
+
+    doc.addEventListener("click", markUserToggle, true);
+    cleanupCallbacks.push(function cleanupAttributionGuard() {
+      doc.removeEventListener("click", markUserToggle, true);
+    });
+    collapseCompactAttribution(doc);
+  }
+
   function createBackdrop(doc) {
     let backdrop = doc.querySelector(".chip-mobile-backdrop");
     if (backdrop) {
@@ -1078,6 +1120,7 @@
     enhanceControls(childDocument);
     enhanceNavigation(childDocument);
     enhanceMapState(childDocument);
+    setupAttributionCollapse(childDocument);
     enhanceDetails(childDocument);
     setupTourMobileLayout(childDocument);
     setupTutorialCompletion(childDocument);
@@ -1086,6 +1129,9 @@
 
   function handleViewportChange() {
     setDeviceMode();
+    // Crossing back under MapLibre's compact-width threshold (e.g. a
+    // landscape-to-portrait rotation) re-expands the attribution pill.
+    collapseCompactAttribution(childDocument);
     scheduleMapResize();
   }
 
