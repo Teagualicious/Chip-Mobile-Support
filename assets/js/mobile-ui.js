@@ -193,6 +193,48 @@
     doc.body.appendChild(script);
   }
 
+  function collapseCompactAttribution(doc) {
+    if (!doc || detectDeviceMode() !== "mobile") {
+      return;
+    }
+    // MapLibre's compact attribution starts expanded on phone-width maps —
+    // a "© OpenStreetMap contributors © CARTO" pill across the bottom of
+    // the map. Collapse it to its info toggle via the control's own button
+    // so internal state stays consistent; the required attribution remains
+    // one tap away and a user's explicit toggle is never overridden.
+    doc.querySelectorAll(".maplibregl-ctrl-attrib.maplibregl-compact-show").forEach(
+      function collapseOne(container) {
+        if (container.dataset.chipUserExpanded === "true") {
+          return;
+        }
+        const button = container.querySelector(".maplibregl-ctrl-attrib-button");
+        if (button) {
+          button.click();
+        }
+        container.classList.remove("maplibregl-compact-show");
+      },
+    );
+  }
+
+  function setupAttributionCollapse(doc) {
+    function markUserToggle(event) {
+      if (!event.isTrusted || !(event.target instanceof frame.contentWindow.Element)) {
+        return;
+      }
+      const button = event.target.closest(".maplibregl-ctrl-attrib-button");
+      const container = button && button.closest(".maplibregl-ctrl-attrib");
+      if (container) {
+        container.dataset.chipUserExpanded = "true";
+      }
+    }
+
+    doc.addEventListener("click", markUserToggle, true);
+    cleanupCallbacks.push(function cleanupAttributionGuard() {
+      doc.removeEventListener("click", markUserToggle, true);
+    });
+    collapseCompactAttribution(doc);
+  }
+
   function createBackdrop(doc) {
     let backdrop = doc.querySelector(".chip-mobile-backdrop");
     if (backdrop) {
@@ -208,6 +250,80 @@
     return backdrop;
   }
 
+  function buildDrawerFurniture(doc, controls) {
+    const scroll = controls.querySelector(".ctrl__scroll");
+    if (!scroll) {
+      return;
+    }
+
+    // Header row with the drawer's only always-visible close action. The
+    // button just drops the `open` class; the class MutationObserver in
+    // enhanceControls owns the rest of the close bookkeeping.
+    if (!controls.querySelector(".chip-drawer-header")) {
+      const header = doc.createElement("div");
+      header.className = "chip-drawer-header";
+      const title = doc.createElement("b");
+      title.textContent = "Map controls";
+      const close = doc.createElement("button");
+      close.type = "button";
+      close.className = "chip-drawer-close";
+      close.setAttribute("aria-label", "Close controls");
+      close.textContent = "×";
+      header.appendChild(title);
+      header.appendChild(close);
+      controls.insertBefore(header, controls.firstChild);
+    }
+
+    // The market-intro copy collapses behind this toggle on mobile. The
+    // `.hdr` element itself is untouched apart from the state class, and on
+    // desktop the class has no effect, so the protected baseline holds.
+    const hdr = scroll.querySelector(".hdr");
+    const firstGroup = scroll.querySelector("details.grp");
+    if (hdr && !scroll.querySelector(".chip-drawer-about-toggle")) {
+      hdr.id = hdr.id || "chipAboutMarket";
+      hdr.classList.add("chip-about-collapsed");
+      const aboutToggle = doc.createElement("button");
+      aboutToggle.type = "button";
+      aboutToggle.className = "chip-drawer-about-toggle";
+      aboutToggle.setAttribute("aria-expanded", "false");
+      aboutToggle.setAttribute("aria-controls", hdr.id);
+      const aboutLabel = doc.createElement("span");
+      aboutLabel.textContent = "About this market";
+      const chevron = doc.createElement("span");
+      chevron.className = "chip-chevron";
+      chevron.setAttribute("aria-hidden", "true");
+      aboutToggle.appendChild(aboutLabel);
+      aboutToggle.appendChild(chevron);
+      aboutToggle.addEventListener("click", function toggleAbout() {
+        const collapsed = hdr.classList.toggle("chip-about-collapsed");
+        aboutToggle.setAttribute("aria-expanded", String(!collapsed));
+      });
+      scroll.insertBefore(aboutToggle, firstGroup);
+    }
+
+    // Give the dashboard a way back into the guided tour (the tutorial page
+    // already has its own launcher). `target="_top"` escapes the iframe.
+    if (pageMode === "dashboard" && !scroll.querySelector(".chip-drawer-tour")) {
+      const tourLink = doc.createElement("a");
+      tourLink.className = "chip-drawer-tour";
+      tourLink.href = "tutorial.html?replay=1";
+      tourLink.target = "_top";
+      tourLink.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>' +
+        "<span>Replay the guided tour</span>";
+      scroll.insertBefore(tourLink, firstGroup);
+    }
+
+    // The sample-data disclaimer lives inside the collapsed copy, so a
+    // compact footer note keeps it visible at all times.
+    if (!scroll.querySelector(".chip-drawer-note")) {
+      const note = doc.createElement("p");
+      note.className = "chip-drawer-note";
+      note.textContent = "Illustrative sample data for demonstration purposes.";
+      scroll.appendChild(note);
+    }
+  }
+
   function enhanceControls(doc) {
     const controls = doc.getElementById("ctrl") || doc.querySelector(".ctrl");
     const toggle = doc.getElementById("mtoggle") || doc.querySelector(".mtoggle");
@@ -220,6 +336,8 @@
     controls.classList.remove("hidden");
     toggle.setAttribute("aria-controls", controls.id);
     toggle.setAttribute("aria-expanded", "false");
+
+    buildDrawerFurniture(doc, controls);
 
     const backdrop = createBackdrop(doc);
 
@@ -293,6 +411,12 @@
     backdrop.addEventListener("click", function handleBackdrop() {
       closeControls({ restoreFocus: true });
     });
+    const drawerClose = controls.querySelector(".chip-drawer-close");
+    if (drawerClose) {
+      drawerClose.addEventListener("click", function handleDrawerClose() {
+        closeControls({ restoreFocus: true });
+      });
+    }
     doc.addEventListener("keydown", handleEscape);
     doc.addEventListener("keydown", handleFocusTrap);
 
@@ -313,6 +437,179 @@
     });
   }
 
+  function enhanceNavigation(doc) {
+    const homeUrl = new URL("./index.html", window.location.href).href;
+
+    // The brand becomes a link back to the landing page. Approved as a
+    // desktop-visible affordance: no resting visual change — cursor,
+    // native tooltip, and a focus ring only (see mobile.css).
+    const brand = doc.querySelector(".appbar__brand");
+    if (brand && !brand.dataset.chipHome) {
+      brand.dataset.chipHome = "true";
+      brand.setAttribute("role", "link");
+      brand.setAttribute("tabindex", "0");
+      brand.setAttribute("title", "Back to experience choices");
+      brand.addEventListener("click", function handleBrandClick() {
+        try {
+          window.top.location.href = homeUrl;
+        } catch (error) {
+          window.location.href = homeUrl;
+        }
+      });
+      brand.addEventListener("keydown", function handleBrandKey(event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          brand.click();
+        }
+      });
+    }
+
+    // Visible way home on phones, in the app bar space freed by the hidden
+    // title and nav.
+    const appbar = doc.querySelector(".appbar");
+    if (appbar && !appbar.querySelector(".chip-home-link")) {
+      const home = doc.createElement("a");
+      home.className = "chip-home-link";
+      home.href = "index.html";
+      home.target = "_top";
+      home.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 3l9 8M6 10v10h12V10"/></svg>' +
+        "<span>Home</span>";
+      appbar.appendChild(home);
+    }
+
+    // Desktop dashboard gains the tour launcher the tutorial page already
+    // has; the mobile drawer carries its own replay link instead.
+    if (pageMode === "dashboard" && !doc.querySelector(".chip-tour-launch")) {
+      const launch = doc.createElement("a");
+      launch.className = "chip-tour-launch";
+      launch.href = "tutorial.html";
+      launch.target = "_top";
+      launch.setAttribute("aria-label", "Take the guided tour");
+      launch.innerHTML = "?&nbsp;&nbsp;Take the tour";
+      doc.body.appendChild(launch);
+    }
+  }
+
+  function enhanceMapState(doc) {
+    const toggle = doc.getElementById("mtoggle") || doc.querySelector(".mtoggle");
+    const metricSelect = doc.getElementById("metric");
+    const legendBar = doc.getElementById("legendBar");
+    const legMin = doc.getElementById("legMin");
+    const legMax = doc.getElementById("legMax");
+    const modeAE = doc.getElementById("modeAE");
+    if (!toggle || !metricSelect || !legendBar) {
+      return;
+    }
+
+    let badge = toggle.querySelector(".chip-filter-badge");
+    if (!badge) {
+      badge = doc.createElement("span");
+      badge.className = "chip-filter-badge";
+      badge.hidden = true;
+      badge.setAttribute("aria-hidden", "true");
+      toggle.appendChild(badge);
+    }
+
+    let legend = doc.querySelector(".chip-map-legend");
+    if (!legend) {
+      legend = doc.createElement("div");
+      legend.className = "chip-map-legend";
+      legend.hidden = true;
+      // The chip mirrors information already exposed inside the drawer, so
+      // it stays out of the accessibility tree.
+      legend.setAttribute("aria-hidden", "true");
+      legend.innerHTML =
+        '<div class="chip-map-legend__title">' +
+        '<span class="chip-map-legend__metric"></span>' +
+        '<span class="chip-map-legend__mode"></span>' +
+        "</div>" +
+        '<div class="chip-map-legend__bar"></div>' +
+        '<div class="chip-map-legend__scale"><span></span><span></span></div>';
+      doc.body.appendChild(legend);
+    }
+
+    const metricLabel = legend.querySelector(".chip-map-legend__metric");
+    const modeLabel = legend.querySelector(".chip-map-legend__mode");
+    const bar = legend.querySelector(".chip-map-legend__bar");
+    const scale = legend.querySelectorAll(".chip-map-legend__scale span");
+
+    function activeFilterCount() {
+      let count = 0;
+      ["vertFilter", "chanFilter"].forEach(function countFilter(id) {
+        const select = doc.getElementById(id);
+        if (select && select.value && select.value !== "all") {
+          count += 1;
+        }
+      });
+      return count;
+    }
+
+    function syncMapState() {
+      const filters = activeFilterCount();
+      badge.hidden = filters === 0;
+      badge.textContent = String(filters);
+      toggle.setAttribute(
+        "aria-label",
+        filters === 0
+          ? "Toggle controls"
+          : "Toggle controls, " + filters + (filters === 1 ? " filter active" : " filters active"),
+      );
+
+      // The original app builds its UI only after the basemap loads; until
+      // the metric select has options there is nothing truthful to mirror,
+      // so the chip stays hidden (see STATUS.md on offline resilience).
+      const option = metricSelect.selectedOptions && metricSelect.selectedOptions[0];
+      if (!option) {
+        legend.hidden = true;
+        return;
+      }
+      metricLabel.textContent = option.textContent;
+      modeLabel.textContent = modeAE && modeAE.classList.contains("on") ? "AE" : "Prospect";
+      bar.style.background = legendBar.style.background || "";
+      scale[0].textContent = legMin ? legMin.textContent : "";
+      scale[1].textContent = legMax ? legMax.textContent : "";
+      legend.hidden = false;
+    }
+
+    function handleStateChange() {
+      // Runs after the app's own change/click handlers (document-level
+      // bubble for changes, a macrotask for Reset's programmatic writes).
+      window.setTimeout(syncMapState, 0);
+    }
+
+    function handleResetClick(event) {
+      const target = event.target instanceof frame.contentWindow.Element
+        ? event.target.closest("#resetFilters")
+        : null;
+      if (target) {
+        handleStateChange();
+      }
+    }
+
+    doc.addEventListener("change", handleStateChange);
+    doc.addEventListener("click", handleResetClick);
+
+    const observer = new frame.contentWindow.MutationObserver(syncMapState);
+    observer.observe(legendBar, { attributes: true, attributeFilter: ["style"] });
+    if (modeAE) {
+      observer.observe(modeAE, { attributes: true, attributeFilter: ["class"] });
+    }
+    if (legMin) {
+      observer.observe(legMin, { childList: true, characterData: true, subtree: true });
+    }
+    if (legMax) {
+      observer.observe(legMax, { childList: true, characterData: true, subtree: true });
+    }
+    syncMapState();
+
+    cleanupCallbacks.push(function cleanupMapState() {
+      observer.disconnect();
+      doc.removeEventListener("change", handleStateChange);
+      doc.removeEventListener("click", handleResetClick);
+    });
+  }
+
   function enhanceDetails(doc) {
     const detail = doc.querySelector(".detail");
     if (!detail) {
@@ -324,10 +621,77 @@
     }
     detail.setAttribute("aria-modal", "false");
 
+    // Half-sheet grab handle. The sheet opens at half height so the tapped
+    // county stays visible; the handle (tap, keyboard, or a short drag)
+    // expands it to near-full height. Sits outside .detail__scroll, so the
+    // app's innerHTML re-renders never remove it.
+    let grab = detail.querySelector(".chip-sheet-grab");
+    if (!grab) {
+      grab = doc.createElement("button");
+      grab.type = "button";
+      grab.className = "chip-sheet-grab";
+      grab.setAttribute("aria-label", "Expand county details");
+      grab.setAttribute("aria-expanded", "false");
+      detail.insertBefore(grab, detail.firstChild);
+    }
+
+    function setSheetTall(tall) {
+      detail.classList.toggle("chip-sheet-tall", tall);
+      grab.setAttribute("aria-expanded", String(tall));
+      grab.setAttribute("aria-label", tall ? "Collapse county details" : "Expand county details");
+      scheduleMapResize();
+    }
+
+    let dragStartY = null;
+    let dragConsumed = false;
+
+    function handleGrabPointerDown(event) {
+      dragStartY = event.clientY;
+    }
+
+    function handleGrabPointerUp(event) {
+      if (dragStartY === null) {
+        return;
+      }
+      const delta = event.clientY - dragStartY;
+      dragStartY = null;
+      if (Math.abs(delta) >= 24) {
+        dragConsumed = true;
+        setSheetTall(delta < 0);
+        // The suppressing click (if any) fires before this macrotask, so a
+        // drag that ends without a click cannot swallow the next tap.
+        window.setTimeout(function clearDragConsumed() {
+          dragConsumed = false;
+        }, 0);
+      }
+    }
+
+    function handleGrabClick() {
+      if (dragConsumed) {
+        dragConsumed = false;
+        return;
+      }
+      setSheetTall(!detail.classList.contains("chip-sheet-tall"));
+    }
+
+    grab.addEventListener("pointerdown", handleGrabPointerDown);
+    grab.addEventListener("pointerup", handleGrabPointerUp);
+    grab.addEventListener("pointercancel", function handleGrabCancel() {
+      dragStartY = null;
+    });
+    grab.addEventListener("click", handleGrabClick);
+
     const controls = doc.getElementById("ctrl") || doc.querySelector(".ctrl");
+    let detailWasVisible = false;
     const observer = new frame.contentWindow.MutationObserver(function handleDetailChange() {
       const computed = frame.contentWindow.getComputedStyle(detail);
       const visible = computed.display !== "none" && computed.visibility !== "hidden";
+      doc.body.classList.toggle("chip-detail-open", visible && detectDeviceMode() === "mobile");
+      if (visible && !detailWasVisible) {
+        // Every fresh selection starts at half height.
+        setSheetTall(false);
+      }
+      detailWasVisible = visible;
       if (visible && controls && detectDeviceMode() === "mobile") {
         controls.classList.remove("open");
         doc.body.classList.remove("chip-controls-open");
@@ -341,6 +705,9 @@
     });
     cleanupCallbacks.push(function cleanupDetailObserver() {
       observer.disconnect();
+      grab.removeEventListener("pointerdown", handleGrabPointerDown);
+      grab.removeEventListener("pointerup", handleGrabPointerUp);
+      grab.removeEventListener("click", handleGrabClick);
     });
   }
 
@@ -485,8 +852,33 @@
     const detailStepIndex = 5;
     let autoOpenedDrawer = false;
     let autoSelectedCounty = false;
+    let autoExpandedAbout = false;
     let rerenderTimer = 0;
     let layoutFrameId = 0;
+
+    // Tour step 1 highlights `.hdr`, which the mobile drawer keeps collapsed
+    // behind the "About this market" toggle. Expand it for that step only,
+    // and restore the collapsed state on the way out.
+    function setAboutExpanded(expanded) {
+      const hdr = controls.querySelector(".hdr");
+      const aboutToggle = controls.querySelector(".chip-drawer-about-toggle");
+      if (!hdr) {
+        return;
+      }
+      if (expanded && hdr.classList.contains("chip-about-collapsed")) {
+        hdr.classList.remove("chip-about-collapsed");
+        autoExpandedAbout = true;
+        if (aboutToggle) {
+          aboutToggle.setAttribute("aria-expanded", "true");
+        }
+      } else if (!expanded && autoExpandedAbout) {
+        autoExpandedAbout = false;
+        hdr.classList.add("chip-about-collapsed");
+        if (aboutToggle) {
+          aboutToggle.setAttribute("aria-expanded", "false");
+        }
+      }
+    }
 
     // `selectCounty`, `deselect`, and `GEO` are top-level bindings in the
     // original inline scripts; `GEO` is a const, so the sample-selection
@@ -593,6 +985,7 @@
       if (!active) {
         doc.body.style.removeProperty("--chip-tour-card-height");
         clearDetailSample();
+        setAboutExpanded(false);
         if (autoOpenedDrawer) {
           autoOpenedDrawer = false;
           controls.classList.remove("open");
@@ -625,6 +1018,8 @@
         scheduleCardClamp();
         return;
       }
+
+      setAboutExpanded(stepIndex === 0);
 
       if (drawerTarget) {
         if (!controls.classList.contains("open")) {
@@ -723,6 +1118,9 @@
     applyMobileMapFit(childDocument);
     applyMobileLabelTuning(childDocument);
     enhanceControls(childDocument);
+    enhanceNavigation(childDocument);
+    enhanceMapState(childDocument);
+    setupAttributionCollapse(childDocument);
     enhanceDetails(childDocument);
     setupTourMobileLayout(childDocument);
     setupTutorialCompletion(childDocument);
@@ -731,6 +1129,9 @@
 
   function handleViewportChange() {
     setDeviceMode();
+    // Crossing back under MapLibre's compact-width threshold (e.g. a
+    // landscape-to-portrait rotation) re-expands the attribution pill.
+    collapseCompactAttribution(childDocument);
     scheduleMapResize();
   }
 

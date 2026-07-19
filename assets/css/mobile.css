@@ -4,6 +4,66 @@
  * Desktop rules in the original source remain the visual baseline.
  */
 
+/*
+ * Elements injected by mobile-ui.js stay hidden unless the mobile rules
+ * below opt them in, so desktop rendering is untouched even though the
+ * elements exist in the DOM on both device modes.
+ */
+.chip-drawer-header,
+.chip-drawer-about-toggle,
+.chip-drawer-tour,
+.chip-drawer-note,
+.chip-map-legend,
+.chip-filter-badge,
+.chip-sheet-grab,
+.chip-home-link {
+  display: none;
+}
+
+/*
+ * Approved desktop-visible navigation affordances (UI review 2026-07-19).
+ * The brand becomes a link home with no resting visual change — pointer
+ * cursor, native tooltip (title attribute), and a focus ring only.
+ */
+.appbar__brand[data-chip-home] {
+  cursor: pointer;
+}
+
+.appbar__brand[data-chip-home]:focus-visible {
+  outline: 3px solid rgba(39, 183, 223, 0.9);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/*
+ * "? Take the tour" launcher on the dashboard, cloned from the tutorial
+ * page's own .tour-launch styling so the pair reads as one system.
+ */
+.chip-tour-launch {
+  position: fixed;
+  z-index: 20;
+  right: 18px;
+  bottom: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: #0d1b2a;
+  color: #fff;
+  box-shadow: 0 8px 26px rgba(3, 10, 20, 0.4);
+  padding: 10px 16px;
+  font: 700 12px "Inter", sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.chip-tour-launch:hover {
+  background: #1a3350;
+}
+
+.chip-tour-launch:focus-visible {
+  outline: 3px solid #66bfff;
+  outline-offset: 2px;
+}
+
 @media (max-width: 820px), (pointer: coarse) and (max-width: 1100px) {
   html[data-device="mobile"],
   html[data-device="mobile"] body {
@@ -86,13 +146,265 @@
     transform: translate3d(calc(-100% - 28px), 0, 0) !important;
   }
 
+  /*
+   * Drawer information architecture. The original panel leads with the
+   * market-intro copy, which fills the top half of a phone drawer on every
+   * open. The drawer becomes a flex column with an injected header row, and
+   * flex `order` moves the copy below the controls without changing DOM
+   * order, so the tour's `.hdr` step target and existing listeners keep
+   * working. The copy collapses under the "About this market" toggle;
+   * mobile-ui.js expands it during tour step 1.
+   */
+  html[data-device="mobile"] .ctrl {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  html[data-device="mobile"] .chip-drawer-header {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px 8px 20px;
+    border-bottom: 1px solid rgba(148, 210, 255, 0.16);
+  }
+
+  html[data-device="mobile"] .chip-drawer-header b {
+    font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+
+  html[data-device="mobile"] .chip-drawer-close {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(148, 210, 255, 0.35);
+    border-radius: 12px;
+    background: transparent;
+    color: inherit;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
   html[data-device="mobile"] .ctrl__scroll {
-    max-height: inherit !important;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none !important;
     padding-bottom: max(22px, calc(12px + var(--chip-safe-bottom))) !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+  }
+
+  html[data-device="mobile"] .ctrl__scroll > .chip-drawer-tour { order: 4; }
+  html[data-device="mobile"] .ctrl__scroll > .chip-drawer-about-toggle { order: 5; }
+  html[data-device="mobile"] .ctrl__scroll > .hdr { order: 6; }
+  html[data-device="mobile"] .ctrl__scroll > details.grp { order: 7; }
+  html[data-device="mobile"] .ctrl__scroll > .chip-drawer-note { order: 8; }
+
+  html[data-device="mobile"] .ctrl__scroll > .hdr + .divider {
+    display: none !important;
+  }
+
+  html[data-device="mobile"] .hdr.chip-about-collapsed {
+    display: none !important;
+  }
+
+  html[data-device="mobile"] .chip-drawer-about-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 12px 0;
+    min-height: 44px;
+    border: 0;
+    border-top: 1px solid rgba(148, 210, 255, 0.16);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  html[data-device="mobile"] .chip-drawer-about-toggle .chip-chevron {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    opacity: 0.6;
+    transition: transform 160ms ease;
+  }
+
+  html[data-device="mobile"] .chip-drawer-about-toggle[aria-expanded="true"] .chip-chevron {
+    transform: rotate(45deg);
+  }
+
+  html[data-device="mobile"] .chip-drawer-tour {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 16px;
+    padding: 11px 0;
+    min-height: 44px;
+    color: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    touch-action: manipulation;
+  }
+
+  html[data-device="mobile"] .chip-drawer-tour svg {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+    opacity: 0.75;
+  }
+
+  html[data-device="mobile"] .chip-drawer-note {
+    display: block;
+    margin: 10px 0 0;
+    font-size: 10.5px;
+    font-weight: 600;
+    opacity: 0.62;
+  }
+
+  /*
+   * Map-state surfaces. With the drawer closed the map is a choropleth with
+   * no key, so a compact legend chip mirrors the drawer's metric, scale and
+   * panel mode, and the Controls button carries an active-filter count.
+   * Both are injected by mobile-ui.js and informational only.
+   */
+  html[data-device="mobile"] .chip-map-legend {
+    position: absolute;
+    left: max(10px, var(--chip-safe-left));
+    bottom: max(26px, calc(18px + var(--chip-safe-bottom)));
+    z-index: 12;
+    display: block;
+    width: 150px;
+    padding: 8px 10px 7px;
+    border: 1px solid rgba(148, 210, 255, 0.28);
+    border-radius: 11px;
+    background: rgba(2, 20, 32, 0.86);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    color: #dcebf4;
+    pointer-events: none;
+  }
+
+  html[data-device="mobile"] .chip-map-legend[hidden],
+  html[data-device="mobile"] body.chip-controls-open .chip-map-legend,
+  html[data-device="mobile"] body.chip-tour-active .chip-map-legend,
+  html[data-device="mobile"] body.chip-detail-open .chip-map-legend {
+    display: none;
+  }
+
+  html[data-device="mobile"] .chip-map-legend__title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  html[data-device="mobile"] .chip-map-legend__metric {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  html[data-device="mobile"] .chip-map-legend__mode {
+    flex: none;
+    color: #67d6f2;
+  }
+
+  html[data-device="mobile"] .chip-map-legend__bar {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  html[data-device="mobile"] .chip-map-legend__scale {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3px;
+    font-size: 8px;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.78;
+  }
+
+  html[data-device="mobile"] .chip-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    margin-left: 2px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #27b7df;
+    color: #04212f;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  html[data-device="mobile"] .chip-filter-badge[hidden] {
+    display: none;
+  }
+
+  /*
+   * Mobile navigation. The app bar hides its title and nav at phone widths,
+   * leaving dead space; the Home chip fills it with a visible way back to
+   * the landing page. The desktop tour launcher yields to the drawer's
+   * "Replay the guided tour" link on mobile.
+   */
+  html[data-device="mobile"] .chip-home-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    color: #e8f3fa;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    touch-action: manipulation;
+  }
+
+  html[data-device="mobile"] .chip-home-link svg {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  html[data-device="mobile"] .chip-tour-launch {
+    display: none !important;
   }
 
   html[data-device="mobile"] .chip-mobile-backdrop {
@@ -116,6 +428,12 @@
     transition: opacity 180ms ease;
   }
 
+  /*
+   * County detail sheet. Opens at half height so the selected county stays
+   * visible on the map, with an injected grab handle that expands the sheet
+   * to the previous near-full height. The original toggles visibility with
+   * `.open` (display none/flex), which stays untouched.
+   */
   html[data-device="mobile"] .detail {
     position: absolute !important;
     top: auto !important;
@@ -125,17 +443,48 @@
     z-index: 24 !important;
     width: 100% !important;
     max-width: none !important;
-    max-height: min(78dvh, calc(100dvh - 72px - var(--chip-safe-top))) !important;
+    max-height: min(55dvh, calc(100dvh - 72px - var(--chip-safe-top))) !important;
     border-right: 0 !important;
     border-bottom: 0 !important;
     border-left: 0 !important;
     border-radius: 20px 20px 0 0 !important;
     padding-bottom: var(--chip-safe-bottom) !important;
     overscroll-behavior: contain;
+    transition: max-height 200ms ease;
+  }
+
+  html[data-device="mobile"] .detail.chip-sheet-tall {
+    max-height: min(84dvh, calc(100dvh - 72px - var(--chip-safe-top))) !important;
+  }
+
+  html[data-device="mobile"] .detail .chip-sheet-grab {
+    flex: none;
+    display: block;
+    width: 100%;
+    height: 26px;
+    min-height: 26px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  html[data-device="mobile"] .detail .chip-sheet-grab::after {
+    content: "";
+    display: block;
+    width: 42px;
+    height: 4.5px;
+    margin: 10px auto 0;
+    border-radius: 3px;
+    background: rgba(148, 210, 255, 0.45);
   }
 
   html[data-device="mobile"] .detail__scroll {
-    max-height: inherit !important;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none !important;
     padding-bottom: max(20px, calc(12px + var(--chip-safe-bottom))) !important;
     overflow-y: auto !important;
     overscroll-behavior: contain;
@@ -317,14 +666,15 @@
     padding-left: 17px !important;
   }
 
-  html[data-device="mobile"] .detail {
-    max-height: min(82dvh, calc(100dvh - 68px - var(--chip-safe-top))) !important;
+  html[data-device="mobile"] .detail.chip-sheet-tall {
+    max-height: min(88dvh, calc(100dvh - 68px - var(--chip-safe-top))) !important;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html[data-device="mobile"] .ctrl,
-  html[data-device="mobile"] .chip-mobile-backdrop {
+  html[data-device="mobile"] .chip-mobile-backdrop,
+  html[data-device="mobile"] .detail {
     transition: none !important;
   }
 }

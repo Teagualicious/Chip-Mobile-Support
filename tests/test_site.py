@@ -107,6 +107,15 @@ def test_landing_page_links_to_both_experiences() -> None:
     assert "Illustrative market and sales data" in html
 
 
+def test_landing_compresses_hero_and_secondary_card_on_phones() -> None:
+    css = read("assets/css/landing.css")
+    # Phone hero must not use the display-size type scale, and the
+    # non-recommended card condenses so both actions fit the first screen.
+    assert "font-size: clamp(1.7rem, 7.5vw, 2.4rem)" in css
+    assert ".experience-card:not(.is-recommended) h2 + p" in css
+    assert "flex-direction: column" in css
+
+
 def test_wrapper_pages_reference_untouched_sources() -> None:
     assert 'src="./CHIPv.4.2.html"' in read("app.html")
     tutorial = read("tutorial.html")
@@ -161,11 +170,78 @@ def test_mobile_layer_contains_required_detection_and_controls_contracts() -> No
     assert not missing, f"Missing mobile behavior contracts: {missing}"
 
 
-def test_mobile_layer_does_not_inject_a_controls_close_button() -> None:
+def test_mobile_drawer_opens_on_controls_with_a_visible_close_action() -> None:
+    # 2026-07-19: the earlier "no injected close button" decision was
+    # reversed in the approved UI review — the drawer now has an explicit
+    # header with a 44px close button, opens straight onto the controls, and
+    # collapses the market-intro copy behind an "About this market" toggle
+    # that the tour re-expands for step 1.
     script = read("assets/js/mobile-ui.js")
     css = read("assets/css/mobile.css")
-    assert "chip-mobile-close" not in script
-    assert "chip-mobile-close" not in css
+    for fragment in ("chip-drawer-header", "chip-drawer-close", "chip-drawer-about-toggle"):
+        assert fragment in script, f"mobile-ui.js missing {fragment}"
+        assert fragment in css, f"mobile.css missing {fragment}"
+    assert 'tourLink.target = "_top"' in script
+    assert "chip-about-collapsed" in script
+    assert "setAboutExpanded(stepIndex === 0)" in script
+    # The reordering must be visual only (flex order), never DOM reordering,
+    # so the tour's step selectors keep matching.
+    assert ".ctrl__scroll > .hdr { order: 6; }" in css
+
+
+def test_mobile_map_view_surfaces_legend_and_filter_state() -> None:
+    script = read("assets/js/mobile-ui.js")
+    css = read("assets/css/mobile.css")
+    for fragment in ("chip-map-legend", "chip-filter-badge"):
+        assert fragment in script, f"mobile-ui.js missing {fragment}"
+        assert fragment in css, f"mobile.css missing {fragment}"
+    # The chip must stay hidden when the map UI never builds (offline CARTO)
+    # and never compete with the drawer, the tour, or the detail sheet.
+    assert "legend.hidden = true" in script
+    assert "body.chip-controls-open .chip-map-legend" in css
+    assert "body.chip-tour-active .chip-map-legend" in css
+    assert "body.chip-detail-open .chip-map-legend" in css
+
+
+def test_mobile_detail_sheet_opens_half_height_with_grab_handle() -> None:
+    script = read("assets/js/mobile-ui.js")
+    css = read("assets/css/mobile.css")
+    assert "chip-sheet-grab" in script
+    assert "chip-sheet-tall" in script
+    assert "chip-sheet-grab" in css
+    assert ".detail.chip-sheet-tall" in css
+    assert "min(55dvh" in css
+    # Every fresh selection must start at half height, and the original's
+    # display none/flex toggling via `.open` must stay untouched.
+    assert "setSheetTall(false)" in script
+    assert re.search(r"html\[data-device=\"mobile\"\] \.detail \{[^}]*display", css) is None
+
+
+def test_navigation_affordances_link_home_and_into_the_tour() -> None:
+    # Approved desktop-visible additions from the 2026-07-19 UI review: the
+    # brand links home with no resting visual change, phones get a Home chip
+    # in the app bar, and the dashboard gains the tutorial's tour launcher.
+    script = read("assets/js/mobile-ui.js")
+    css = read("assets/css/mobile.css")
+    assert 'brand.setAttribute("role", "link")' in script
+    assert "chip-home-link" in script and "chip-home-link" in css
+    assert "chip-tour-launch" in script and "chip-tour-launch" in css
+    # Everything that leaves the iframe must target the top window.
+    assert script.count('target = "_top"') >= 3
+    # The launcher is desktop-only; mobile uses the drawer's replay link.
+    assert ".chip-tour-launch {\n    display: none !important;\n  }" in css
+
+
+def test_mobile_collapses_the_default_expanded_map_attribution() -> None:
+    # MapLibre's compact attribution pops out expanded by default on
+    # phone-width maps. The delivery layer collapses it to its info toggle
+    # (attribution stays one tap away) and must never override a user's own
+    # explicit toggle.
+    script = read("assets/js/mobile-ui.js")
+    assert "maplibregl-compact-show" in script
+    assert "maplibregl-ctrl-attrib-button" in script
+    assert "chipUserExpanded" in script
+    assert "event.isTrusted" in script
 
 
 def test_mobile_css_is_scoped_and_safe_area_aware() -> None:
@@ -189,8 +265,9 @@ def test_mobile_tour_adapts_to_short_screens() -> None:
     assert 'style.setProperty("--chip-tour-card-height"' in script
     assert 'scrollIntoView({ block: "center", inline: "nearest" })' in script
     # Observers must come from the child window so they survive iframe
-    # reloads: controls, detail, tutorial-completion, tour state, tour card.
-    assert script.count("new frame.contentWindow.MutationObserver") == 5
+    # reloads: controls, map-state legend, detail, tutorial-completion,
+    # tour state, tour card.
+    assert script.count("new frame.contentWindow.MutationObserver") == 6
     # Desktop tour responsiveness: reveal panel targets and clamp the card.
     assert 'scrollIntoView({ block: "nearest", inline: "nearest" })' in script
     assert "scheduleCardClamp" in script
