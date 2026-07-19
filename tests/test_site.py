@@ -161,11 +161,23 @@ def test_mobile_layer_contains_required_detection_and_controls_contracts() -> No
     assert not missing, f"Missing mobile behavior contracts: {missing}"
 
 
-def test_mobile_layer_does_not_inject_a_controls_close_button() -> None:
+def test_mobile_drawer_opens_on_controls_with_a_visible_close_action() -> None:
+    # 2026-07-19: the earlier "no injected close button" decision was
+    # reversed in the approved UI review — the drawer now has an explicit
+    # header with a 44px close button, opens straight onto the controls, and
+    # collapses the market-intro copy behind an "About this market" toggle
+    # that the tour re-expands for step 1.
     script = read("assets/js/mobile-ui.js")
     css = read("assets/css/mobile.css")
-    assert "chip-mobile-close" not in script
-    assert "chip-mobile-close" not in css
+    for fragment in ("chip-drawer-header", "chip-drawer-close", "chip-drawer-about-toggle"):
+        assert fragment in script, f"mobile-ui.js missing {fragment}"
+        assert fragment in css, f"mobile.css missing {fragment}"
+    assert 'tourLink.target = "_top"' in script
+    assert "chip-about-collapsed" in script
+    assert "setAboutExpanded(stepIndex === 0)" in script
+    # The reordering must be visual only (flex order), never DOM reordering,
+    # so the tour's step selectors keep matching.
+    assert ".ctrl__scroll > .hdr { order: 6; }" in css
 
 
 def test_mobile_css_is_scoped_and_safe_area_aware() -> None:

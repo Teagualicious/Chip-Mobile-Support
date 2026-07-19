@@ -208,6 +208,80 @@
     return backdrop;
   }
 
+  function buildDrawerFurniture(doc, controls) {
+    const scroll = controls.querySelector(".ctrl__scroll");
+    if (!scroll) {
+      return;
+    }
+
+    // Header row with the drawer's only always-visible close action. The
+    // button just drops the `open` class; the class MutationObserver in
+    // enhanceControls owns the rest of the close bookkeeping.
+    if (!controls.querySelector(".chip-drawer-header")) {
+      const header = doc.createElement("div");
+      header.className = "chip-drawer-header";
+      const title = doc.createElement("b");
+      title.textContent = "Map controls";
+      const close = doc.createElement("button");
+      close.type = "button";
+      close.className = "chip-drawer-close";
+      close.setAttribute("aria-label", "Close controls");
+      close.textContent = "×";
+      header.appendChild(title);
+      header.appendChild(close);
+      controls.insertBefore(header, controls.firstChild);
+    }
+
+    // The market-intro copy collapses behind this toggle on mobile. The
+    // `.hdr` element itself is untouched apart from the state class, and on
+    // desktop the class has no effect, so the protected baseline holds.
+    const hdr = scroll.querySelector(".hdr");
+    const firstGroup = scroll.querySelector("details.grp");
+    if (hdr && !scroll.querySelector(".chip-drawer-about-toggle")) {
+      hdr.id = hdr.id || "chipAboutMarket";
+      hdr.classList.add("chip-about-collapsed");
+      const aboutToggle = doc.createElement("button");
+      aboutToggle.type = "button";
+      aboutToggle.className = "chip-drawer-about-toggle";
+      aboutToggle.setAttribute("aria-expanded", "false");
+      aboutToggle.setAttribute("aria-controls", hdr.id);
+      const aboutLabel = doc.createElement("span");
+      aboutLabel.textContent = "About this market";
+      const chevron = doc.createElement("span");
+      chevron.className = "chip-chevron";
+      chevron.setAttribute("aria-hidden", "true");
+      aboutToggle.appendChild(aboutLabel);
+      aboutToggle.appendChild(chevron);
+      aboutToggle.addEventListener("click", function toggleAbout() {
+        const collapsed = hdr.classList.toggle("chip-about-collapsed");
+        aboutToggle.setAttribute("aria-expanded", String(!collapsed));
+      });
+      scroll.insertBefore(aboutToggle, firstGroup);
+    }
+
+    // Give the dashboard a way back into the guided tour (the tutorial page
+    // already has its own launcher). `target="_top"` escapes the iframe.
+    if (pageMode === "dashboard" && !scroll.querySelector(".chip-drawer-tour")) {
+      const tourLink = doc.createElement("a");
+      tourLink.className = "chip-drawer-tour";
+      tourLink.href = "tutorial.html?replay=1";
+      tourLink.target = "_top";
+      tourLink.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>' +
+        "<span>Replay the guided tour</span>";
+      scroll.insertBefore(tourLink, firstGroup);
+    }
+
+    // The sample-data disclaimer lives inside the collapsed copy, so a
+    // compact footer note keeps it visible at all times.
+    if (!scroll.querySelector(".chip-drawer-note")) {
+      const note = doc.createElement("p");
+      note.className = "chip-drawer-note";
+      note.textContent = "Illustrative sample data for demonstration purposes.";
+      scroll.appendChild(note);
+    }
+  }
+
   function enhanceControls(doc) {
     const controls = doc.getElementById("ctrl") || doc.querySelector(".ctrl");
     const toggle = doc.getElementById("mtoggle") || doc.querySelector(".mtoggle");
@@ -220,6 +294,8 @@
     controls.classList.remove("hidden");
     toggle.setAttribute("aria-controls", controls.id);
     toggle.setAttribute("aria-expanded", "false");
+
+    buildDrawerFurniture(doc, controls);
 
     const backdrop = createBackdrop(doc);
 
@@ -293,6 +369,12 @@
     backdrop.addEventListener("click", function handleBackdrop() {
       closeControls({ restoreFocus: true });
     });
+    const drawerClose = controls.querySelector(".chip-drawer-close");
+    if (drawerClose) {
+      drawerClose.addEventListener("click", function handleDrawerClose() {
+        closeControls({ restoreFocus: true });
+      });
+    }
     doc.addEventListener("keydown", handleEscape);
     doc.addEventListener("keydown", handleFocusTrap);
 
@@ -485,8 +567,33 @@
     const detailStepIndex = 5;
     let autoOpenedDrawer = false;
     let autoSelectedCounty = false;
+    let autoExpandedAbout = false;
     let rerenderTimer = 0;
     let layoutFrameId = 0;
+
+    // Tour step 1 highlights `.hdr`, which the mobile drawer keeps collapsed
+    // behind the "About this market" toggle. Expand it for that step only,
+    // and restore the collapsed state on the way out.
+    function setAboutExpanded(expanded) {
+      const hdr = controls.querySelector(".hdr");
+      const aboutToggle = controls.querySelector(".chip-drawer-about-toggle");
+      if (!hdr) {
+        return;
+      }
+      if (expanded && hdr.classList.contains("chip-about-collapsed")) {
+        hdr.classList.remove("chip-about-collapsed");
+        autoExpandedAbout = true;
+        if (aboutToggle) {
+          aboutToggle.setAttribute("aria-expanded", "true");
+        }
+      } else if (!expanded && autoExpandedAbout) {
+        autoExpandedAbout = false;
+        hdr.classList.add("chip-about-collapsed");
+        if (aboutToggle) {
+          aboutToggle.setAttribute("aria-expanded", "false");
+        }
+      }
+    }
 
     // `selectCounty`, `deselect`, and `GEO` are top-level bindings in the
     // original inline scripts; `GEO` is a const, so the sample-selection
@@ -593,6 +700,7 @@
       if (!active) {
         doc.body.style.removeProperty("--chip-tour-card-height");
         clearDetailSample();
+        setAboutExpanded(false);
         if (autoOpenedDrawer) {
           autoOpenedDrawer = false;
           controls.classList.remove("open");
@@ -625,6 +733,8 @@
         scheduleCardClamp();
         return;
       }
+
+      setAboutExpanded(stepIndex === 0);
 
       if (drawerTarget) {
         if (!controls.classList.contains("open")) {
