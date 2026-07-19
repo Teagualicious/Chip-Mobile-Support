@@ -107,6 +107,15 @@ def test_landing_page_links_to_both_experiences() -> None:
     assert "Illustrative market and sales data" in html
 
 
+def test_landing_compresses_hero_and_secondary_card_on_phones() -> None:
+    css = read("assets/css/landing.css")
+    # Phone hero must not use the display-size type scale, and the
+    # non-recommended card condenses so both actions fit the first screen.
+    assert "font-size: clamp(1.7rem, 7.5vw, 2.4rem)" in css
+    assert ".experience-card:not(.is-recommended) h2 + p" in css
+    assert "flex-direction: column" in css
+
+
 def test_wrapper_pages_reference_untouched_sources() -> None:
     assert 'src="./CHIPv.4.2.html"' in read("app.html")
     tutorial = read("tutorial.html")
