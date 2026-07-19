@@ -12,7 +12,9 @@
 .chip-drawer-header,
 .chip-drawer-about-toggle,
 .chip-drawer-tour,
-.chip-drawer-note {
+.chip-drawer-note,
+.chip-map-legend,
+.chip-filter-badge {
   display: none;
 }
 
@@ -233,6 +235,93 @@
     font-size: 10.5px;
     font-weight: 600;
     opacity: 0.62;
+  }
+
+  /*
+   * Map-state surfaces. With the drawer closed the map is a choropleth with
+   * no key, so a compact legend chip mirrors the drawer's metric, scale and
+   * panel mode, and the Controls button carries an active-filter count.
+   * Both are injected by mobile-ui.js and informational only.
+   */
+  html[data-device="mobile"] .chip-map-legend {
+    position: absolute;
+    left: max(10px, var(--chip-safe-left));
+    bottom: max(26px, calc(18px + var(--chip-safe-bottom)));
+    z-index: 12;
+    display: block;
+    width: 150px;
+    padding: 8px 10px 7px;
+    border: 1px solid rgba(148, 210, 255, 0.28);
+    border-radius: 11px;
+    background: rgba(2, 20, 32, 0.86);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    color: #dcebf4;
+    pointer-events: none;
+  }
+
+  html[data-device="mobile"] .chip-map-legend[hidden],
+  html[data-device="mobile"] body.chip-controls-open .chip-map-legend,
+  html[data-device="mobile"] body.chip-tour-active .chip-map-legend,
+  html[data-device="mobile"] body.chip-detail-open .chip-map-legend {
+    display: none;
+  }
+
+  html[data-device="mobile"] .chip-map-legend__title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  html[data-device="mobile"] .chip-map-legend__metric {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  html[data-device="mobile"] .chip-map-legend__mode {
+    flex: none;
+    color: #67d6f2;
+  }
+
+  html[data-device="mobile"] .chip-map-legend__bar {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  html[data-device="mobile"] .chip-map-legend__scale {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3px;
+    font-size: 8px;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.78;
+  }
+
+  html[data-device="mobile"] .chip-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    margin-left: 2px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #27b7df;
+    color: #04212f;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  html[data-device="mobile"] .chip-filter-badge[hidden] {
+    display: none;
   }
 
   html[data-device="mobile"] .chip-mobile-backdrop {

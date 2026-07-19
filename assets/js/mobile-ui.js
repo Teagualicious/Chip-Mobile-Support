@@ -395,6 +395,125 @@
     });
   }
 
+  function enhanceMapState(doc) {
+    const toggle = doc.getElementById("mtoggle") || doc.querySelector(".mtoggle");
+    const metricSelect = doc.getElementById("metric");
+    const legendBar = doc.getElementById("legendBar");
+    const legMin = doc.getElementById("legMin");
+    const legMax = doc.getElementById("legMax");
+    const modeAE = doc.getElementById("modeAE");
+    if (!toggle || !metricSelect || !legendBar) {
+      return;
+    }
+
+    let badge = toggle.querySelector(".chip-filter-badge");
+    if (!badge) {
+      badge = doc.createElement("span");
+      badge.className = "chip-filter-badge";
+      badge.hidden = true;
+      badge.setAttribute("aria-hidden", "true");
+      toggle.appendChild(badge);
+    }
+
+    let legend = doc.querySelector(".chip-map-legend");
+    if (!legend) {
+      legend = doc.createElement("div");
+      legend.className = "chip-map-legend";
+      legend.hidden = true;
+      // The chip mirrors information already exposed inside the drawer, so
+      // it stays out of the accessibility tree.
+      legend.setAttribute("aria-hidden", "true");
+      legend.innerHTML =
+        '<div class="chip-map-legend__title">' +
+        '<span class="chip-map-legend__metric"></span>' +
+        '<span class="chip-map-legend__mode"></span>' +
+        "</div>" +
+        '<div class="chip-map-legend__bar"></div>' +
+        '<div class="chip-map-legend__scale"><span></span><span></span></div>';
+      doc.body.appendChild(legend);
+    }
+
+    const metricLabel = legend.querySelector(".chip-map-legend__metric");
+    const modeLabel = legend.querySelector(".chip-map-legend__mode");
+    const bar = legend.querySelector(".chip-map-legend__bar");
+    const scale = legend.querySelectorAll(".chip-map-legend__scale span");
+
+    function activeFilterCount() {
+      let count = 0;
+      ["vertFilter", "chanFilter"].forEach(function countFilter(id) {
+        const select = doc.getElementById(id);
+        if (select && select.value && select.value !== "all") {
+          count += 1;
+        }
+      });
+      return count;
+    }
+
+    function syncMapState() {
+      const filters = activeFilterCount();
+      badge.hidden = filters === 0;
+      badge.textContent = String(filters);
+      toggle.setAttribute(
+        "aria-label",
+        filters === 0
+          ? "Toggle controls"
+          : "Toggle controls, " + filters + (filters === 1 ? " filter active" : " filters active"),
+      );
+
+      // The original app builds its UI only after the basemap loads; until
+      // the metric select has options there is nothing truthful to mirror,
+      // so the chip stays hidden (see STATUS.md on offline resilience).
+      const option = metricSelect.selectedOptions && metricSelect.selectedOptions[0];
+      if (!option) {
+        legend.hidden = true;
+        return;
+      }
+      metricLabel.textContent = option.textContent;
+      modeLabel.textContent = modeAE && modeAE.classList.contains("on") ? "AE" : "Prospect";
+      bar.style.background = legendBar.style.background || "";
+      scale[0].textContent = legMin ? legMin.textContent : "";
+      scale[1].textContent = legMax ? legMax.textContent : "";
+      legend.hidden = false;
+    }
+
+    function handleStateChange() {
+      // Runs after the app's own change/click handlers (document-level
+      // bubble for changes, a macrotask for Reset's programmatic writes).
+      window.setTimeout(syncMapState, 0);
+    }
+
+    function handleResetClick(event) {
+      const target = event.target instanceof frame.contentWindow.Element
+        ? event.target.closest("#resetFilters")
+        : null;
+      if (target) {
+        handleStateChange();
+      }
+    }
+
+    doc.addEventListener("change", handleStateChange);
+    doc.addEventListener("click", handleResetClick);
+
+    const observer = new frame.contentWindow.MutationObserver(syncMapState);
+    observer.observe(legendBar, { attributes: true, attributeFilter: ["style"] });
+    if (modeAE) {
+      observer.observe(modeAE, { attributes: true, attributeFilter: ["class"] });
+    }
+    if (legMin) {
+      observer.observe(legMin, { childList: true, characterData: true, subtree: true });
+    }
+    if (legMax) {
+      observer.observe(legMax, { childList: true, characterData: true, subtree: true });
+    }
+    syncMapState();
+
+    cleanupCallbacks.push(function cleanupMapState() {
+      observer.disconnect();
+      doc.removeEventListener("change", handleStateChange);
+      doc.removeEventListener("click", handleResetClick);
+    });
+  }
+
   function enhanceDetails(doc) {
     const detail = doc.querySelector(".detail");
     if (!detail) {
@@ -410,6 +529,7 @@
     const observer = new frame.contentWindow.MutationObserver(function handleDetailChange() {
       const computed = frame.contentWindow.getComputedStyle(detail);
       const visible = computed.display !== "none" && computed.visibility !== "hidden";
+      doc.body.classList.toggle("chip-detail-open", visible && detectDeviceMode() === "mobile");
       if (visible && controls && detectDeviceMode() === "mobile") {
         controls.classList.remove("open");
         doc.body.classList.remove("chip-controls-open");
@@ -833,6 +953,7 @@
     applyMobileMapFit(childDocument);
     applyMobileLabelTuning(childDocument);
     enhanceControls(childDocument);
+    enhanceMapState(childDocument);
     enhanceDetails(childDocument);
     setupTourMobileLayout(childDocument);
     setupTutorialCompletion(childDocument);

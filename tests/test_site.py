@@ -180,6 +180,20 @@ def test_mobile_drawer_opens_on_controls_with_a_visible_close_action() -> None:
     assert ".ctrl__scroll > .hdr { order: 6; }" in css
 
 
+def test_mobile_map_view_surfaces_legend_and_filter_state() -> None:
+    script = read("assets/js/mobile-ui.js")
+    css = read("assets/css/mobile.css")
+    for fragment in ("chip-map-legend", "chip-filter-badge"):
+        assert fragment in script, f"mobile-ui.js missing {fragment}"
+        assert fragment in css, f"mobile.css missing {fragment}"
+    # The chip must stay hidden when the map UI never builds (offline CARTO)
+    # and never compete with the drawer, the tour, or the detail sheet.
+    assert "legend.hidden = true" in script
+    assert "body.chip-controls-open .chip-map-legend" in css
+    assert "body.chip-tour-active .chip-map-legend" in css
+    assert "body.chip-detail-open .chip-map-legend" in css
+
+
 def test_mobile_css_is_scoped_and_safe_area_aware() -> None:
     css = read("assets/css/mobile.css")
     assert "max-width: 820px" in css
@@ -201,8 +215,9 @@ def test_mobile_tour_adapts_to_short_screens() -> None:
     assert 'style.setProperty("--chip-tour-card-height"' in script
     assert 'scrollIntoView({ block: "center", inline: "nearest" })' in script
     # Observers must come from the child window so they survive iframe
-    # reloads: controls, detail, tutorial-completion, tour state, tour card.
-    assert script.count("new frame.contentWindow.MutationObserver") == 5
+    # reloads: controls, map-state legend, detail, tutorial-completion,
+    # tour state, tour card.
+    assert script.count("new frame.contentWindow.MutationObserver") == 6
     # Desktop tour responsiveness: reveal panel targets and clamp the card.
     assert 'scrollIntoView({ block: "nearest", inline: "nearest" })' in script
     assert "scheduleCardClamp" in script
