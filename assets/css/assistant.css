@@ -32,6 +32,16 @@
   outline-offset: 2px;
 }
 
+/*
+ * While the guided tour runs, the launcher would float undimmed above the
+ * tour shade, so mobile-ui.js hides it via this root class. The tour's
+ * bonus step re-reveals it as the highlight target after Finish.
+ */
+html.chip-tour-open .chip-assistant-launcher,
+html.chip-tour-open .chip-assistant-panel {
+  display: none;
+}
+
 .chip-assistant-launcher svg {
   flex: none;
   width: 15px;
@@ -342,6 +352,7 @@
     right: 12px;
     bottom: calc(158px + env(safe-area-inset-bottom, 0px));
     min-height: 44px;
+    font-size: 13px;
   }
 
   html[data-device="mobile"] .chip-assistant-panel {
@@ -355,6 +366,52 @@
     border-bottom: 0;
     border-left: 0;
     border-radius: 18px 18px 0 0;
+    font-size: 14.5px;
+    line-height: 1.55;
+  }
+
+  html[data-device="mobile"] .chip-assistant-head b {
+    font-size: 15px;
+  }
+
+  html[data-device="mobile"] .chip-assistant-mode {
+    font-size: 10.5px;
+  }
+
+  html[data-device="mobile"] .chip-assistant-log {
+    gap: 12px;
+    padding: 15px 15px 10px;
+  }
+
+  html[data-device="mobile"] .chip-assistant-msg {
+    max-width: 94%;
+    padding: 11px 14px;
+  }
+
+  html[data-device="mobile"] .chip-assistant-chips button {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  /* 16px keeps iOS Safari from zooming the page on focus. */
+  html[data-device="mobile"] .chip-assistant-settings input,
+  html[data-device="mobile"] .chip-assistant-settings select {
+    padding: 11px 12px;
+    font-size: 16px;
+  }
+
+  html[data-device="mobile"] .chip-assistant-settings label {
+    font-size: 11.5px;
+  }
+
+  html[data-device="mobile"] .chip-assistant-settings .hint {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  html[data-device="mobile"] .chip-assistant-settings button {
+    padding: 11px 0;
+    font-size: 13px;
   }
 }
 

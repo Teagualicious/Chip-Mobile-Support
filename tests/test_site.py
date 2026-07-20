@@ -220,11 +220,12 @@ def test_mobile_detail_sheet_opens_half_height_with_grab_handle() -> None:
 
 
 def test_assistant_chat_is_wired_without_committed_credentials() -> None:
-    html = read("app.html")
-    assert 'href="./assets/css/assistant.css"' in html
-    assert 'src="./assets/js/chip-assistant.js"' in html
-    # The tutorial keeps its guided tour as the helper; no chat there.
-    assert "chip-assistant" not in read("tutorial.html")
+    # 2026-07-20: the assistant now loads on the tutorial page too, so the
+    # tour's bonus step can spotlight a real launcher there.
+    for page in ("app.html", "tutorial.html"):
+        html = read(page)
+        assert 'href="./assets/css/assistant.css"' in html, page
+        assert 'src="./assets/js/chip-assistant.js"' in html, page
 
     script = read("assets/js/chip-assistant.js")
     # Direct browser calls to the Claude API require this opt-in header, and
@@ -236,6 +237,22 @@ def test_assistant_chat_is_wired_without_committed_credentials() -> None:
     assert "answerLocally" in script  # keyless demo-mode fallback
     assert 'stop_reason === "refusal"' in script
     assert 'stop_reason === "tool_use"' in script
+
+
+def test_tour_gains_bonus_steps_for_assistant_and_replay() -> None:
+    # The original steps array is closure-local in the frozen tutorial, so
+    # the two bonus steps (Ask CHIP, tour replay) are a delivery-layer
+    # overlay reusing the tour's own classes, started from the Finish click.
+    script = read("assets/js/mobile-ui.js")
+    assert "setupTourExtension" in script
+    assert "chipTourExtra" in script
+    assert '"Ask CHIP anything"' in script
+    assert '"Replay this tour anytime"' in script
+    assert "chip-assistant-launcher" in script  # bonus step measures the real button
+    # The assistant hides while the original tour runs (it floats above the
+    # shade) and returns as the bonus step's highlight target.
+    assert "chip-tour-open" in script
+    assert "chip-tour-open" in read("assets/css/assistant.css")
 
 
 def test_no_api_keys_committed_to_the_delivery_layer() -> None:
