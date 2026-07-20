@@ -293,7 +293,13 @@ def test_app_refinements_cover_the_final_touch_up_round() -> None:
     assert "postureScore" in script  # growth-upside comparator
     assert "refreshOpenDetail()" in script  # toggle re-renders through the app
     # Detail sections become dropdowns and both panes get a top switch button.
+    # 2026-07-20 cleanup: the money sections never collapse, the client
+    # book starts open, and demographics + revenue-by-vertical merge into
+    # a bottom "County data" dropdown.
     assert "chip-acc" in script
+    assert "NEVER_COLLAPSE_PREFIXES" in script and '"sales snapshot"' in script
+    assert "mergeCountyData" in script
+    assert '"client book"' in script  # default-open working list
     assert "chipToAE" in script and "#toProspect" in script
     assert "chip-btn-ae" in script  # AE-green so the two directions differ
     # Methodology + Get/Keep/Grow move into a popup where the detail pane is.
@@ -313,6 +319,8 @@ def test_detail_panes_collapse_and_floating_chips_clear_open_panes() -> None:
     # The AE switch is green and phone tap targets are full size.
     assert ".chip-btn-ae" in css
     assert 'html[data-device="mobile"] .chip-acc > .chip-acc__head' in css
+    # Merged County data sub-heads keep the frozen heading look.
+    assert ".chip-subhead" in css
     # Desktop chips shift left of an open pane; phones hide them instead.
     assert "--chip-pane-clear" in css
     assert 'html[data-device="mobile"].chip-pane-open' in css

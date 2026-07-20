@@ -211,10 +211,20 @@
   // Open/closed choices survive re-renders (filter changes, mode flips)
   // for the rest of the visit.
   const accordionState = new Map();
-  const DEFAULT_OPEN = new Set(["market read", "priority get targets"]);
+  // 2026-07-20 cleanup: the money sections stay front and center as plain
+  // always-visible sections; the working client book starts open; context
+  // (market read, county data, prospect rollups) starts collapsed.
+  const NEVER_COLLAPSE_PREFIXES = ["sales snapshot", "sales plan"];
+  const DEFAULT_OPEN_PREFIXES = ["client book", "priority get targets"];
 
   function sectionKey(title) {
     return title.textContent.trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  function startsWithAny(key, prefixes) {
+    return prefixes.some(function (prefix) {
+      return key.indexOf(prefix) === 0;
+    });
   }
 
   function moveSwitchButtonsToTop(doc, scroll) {
@@ -249,6 +259,63 @@
       bar.appendChild(back);
     }
     header.insertAdjacentElement("afterend", bar);
+  }
+
+  function mergeCountyData(doc, scroll) {
+    // AE pane cleanup (2026-07-20 feedback): demographics and the
+    // revenue-by-vertical mix are context, not workflow, so they merge
+    // into one "County data" dropdown at the bottom. Removing them from
+    // their frozen slots also floats Sales snapshot / Sales plan to the
+    // top and leaves the client book directly beneath the plan.
+    const blocks = Array.from(scroll.querySelectorAll(".block"));
+    let demographics = null;
+    let revenue = null;
+    let clientBook = null;
+    blocks.forEach(function (block) {
+      const title = block.querySelector(":scope > .block__t");
+      if (!title) {
+        return;
+      }
+      const key = sectionKey(title);
+      if (key.indexOf("demographics") === 0) {
+        demographics = block;
+      } else if (key.indexOf("revenue by vertical") === 0) {
+        revenue = block;
+      } else if (key.indexOf("client book") === 0) {
+        clientBook = block;
+      }
+    });
+    if (!demographics && !revenue) {
+      return;
+    }
+
+    const county = doc.createElement("div");
+    county.className = "block";
+    county.style.borderBottom = "none";
+    const title = doc.createElement("div");
+    title.className = "block__t";
+    title.textContent = "County data · demographics & mix";
+    county.appendChild(title);
+
+    [demographics, revenue].forEach(function (source) {
+      if (!source) {
+        return;
+      }
+      const sourceTitle = source.querySelector(":scope > .block__t");
+      if (sourceTitle) {
+        sourceTitle.classList.add("chip-subhead");
+      }
+      while (source.firstChild) {
+        county.appendChild(source.firstChild);
+      }
+      source.remove();
+    });
+    scroll.appendChild(county);
+    if (clientBook) {
+      // The book is no longer the last section, so its frozen inline
+      // border-bottom:none gives way to the normal divider.
+      clientBook.style.removeProperty("border-bottom");
+    }
   }
 
   function addClientSortControls(doc, scroll) {
@@ -303,6 +370,9 @@
       if (!title || block.querySelector(":scope > details.chip-acc")) {
         return;
       }
+      if (startsWithAny(sectionKey(title), NEVER_COLLAPSE_PREFIXES)) {
+        return;
+      }
 
       const details = doc.createElement("details");
       details.className = "chip-acc";
@@ -329,7 +399,7 @@
       const key = sectionKey(title);
       details.open = accordionState.has(key)
         ? accordionState.get(key)
-        : DEFAULT_OPEN.has(key);
+        : startsWithAny(key, DEFAULT_OPEN_PREFIXES);
       details.addEventListener("toggle", function () {
         accordionState.set(key, details.open);
       });
@@ -343,6 +413,7 @@
     }
     scroll.dataset.chipRefined = "true";
     moveSwitchButtonsToTop(doc, scroll);
+    mergeCountyData(doc, scroll);
     addClientSortControls(doc, scroll);
     collapseSections(doc, scroll);
   }

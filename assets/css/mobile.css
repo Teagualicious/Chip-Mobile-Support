@@ -260,6 +260,18 @@ html.chip-pane-open:not([data-device="mobile"]) .tour-launch {
 }
 
 /*
+ * Inside the merged "County data" dropdown the source blocks' headings
+ * become sub-heads (they keep the frozen .block__t look).
+ */
+.chip-subhead {
+  margin: 18px 0 10px !important;
+}
+
+.chip-acc__body > .chip-subhead:first-child {
+  margin-top: 0 !important;
+}
+
+/*
  * Methodology & framework popup. Borrowing the frozen .panel/.detail
  * classes gives it the detail pane's geometry, theming and mobile
  * bottom-sheet treatment; it only needs to stack above the real detail
