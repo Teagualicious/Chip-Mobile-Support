@@ -148,6 +148,54 @@ html.chip-pane-open:not([data-device="mobile"]) .tour-launch {
 }
 
 /*
+ * "Rank by" toggle for the client book: churn risk (defend first) or
+ * growth upside (expand first). Active pill matches the delivery
+ * layer's blue accent used on the Ask CHIP send button.
+ */
+.chip-sort-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 2px;
+}
+
+.chip-sort-bar__label {
+  margin-right: 2px;
+  color: var(--dim, #8296a8);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chip-sort-bar button {
+  min-height: 26px;
+  padding: 5px 11px;
+  border: 1px solid rgba(148, 210, 255, 0.35);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: 600 11px Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.chip-sort-bar button:hover {
+  background: rgba(148, 210, 255, 0.12);
+}
+
+.chip-sort-bar button[aria-pressed="true"] {
+  border-color: #0f8ad6;
+  background: #0f8ad6;
+  color: #fff;
+}
+
+.chip-sort-bar button:focus-visible {
+  outline: 3px solid rgba(39, 183, 223, 0.9);
+  outline-offset: 2px;
+}
+
+/*
  * Long detail-pane sections collapse into dropdowns. The frozen .block__t
  * heading becomes the summary row; per-section open state is remembered
  * by app-refinements.js for the rest of the visit.
@@ -451,6 +499,13 @@ html.chip-pane-open:not([data-device="mobile"]) .tour-launch {
     text-align: left;
     cursor: pointer;
     touch-action: manipulation;
+  }
+
+  /* Comfortable tap targets for the client book's rank toggle. */
+  html[data-device="mobile"] .chip-sort-bar button {
+    min-height: 36px;
+    padding: 8px 14px;
+    font-size: 12.5px;
   }
 
   /*

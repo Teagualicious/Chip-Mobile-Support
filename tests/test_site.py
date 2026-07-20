@@ -284,8 +284,12 @@ def test_app_refinements_cover_the_final_touch_up_round() -> None:
     assert "scaleDesktopLabels" in script
     # Clicking a county gently zooms and centers it.
     assert "map.easeTo({" in script
-    # AE client book ranks by priority via a wrap of the frozen renderer.
+    # AE client book ranks by priority via a wrap of the frozen renderer,
+    # with a user toggle between churn risk and growth upside.
     assert "clientRowsHTML" in script and "churnTier" in script
+    assert "chip-sort-bar" in script
+    assert "postureScore" in script  # growth-upside comparator
+    assert "refreshOpenDetail()" in script  # toggle re-renders through the app
     # Detail sections become dropdowns and both panes get a top switch button.
     assert "chip-acc" in script
     assert "chipToAE" in script and "#toProspect" in script
@@ -300,8 +304,9 @@ def test_detail_panes_collapse_and_floating_chips_clear_open_panes() -> None:
     assert ".chip-mode-switchbar" in css
     assert ".chip-method-pop" in css
     assert ".chip-drawer-method-link" in css
-    # KEEP pill reads as urgent.
+    # KEEP pill reads as urgent, and the rank toggle is styled.
     assert ".pst--keep" in css
+    assert ".chip-sort-bar" in css
     # Desktop chips shift left of an open pane; phones hide them instead.
     assert "--chip-pane-clear" in css
     assert 'html[data-device="mobile"].chip-pane-open' in css
