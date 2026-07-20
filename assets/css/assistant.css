@@ -26,6 +26,21 @@
   padding: 10px 16px;
   font: 700 12px Inter, system-ui, sans-serif;
   cursor: pointer;
+  transition: right 200ms ease;
+}
+
+/*
+ * When the county detail pane or the methodology popup is open on
+ * desktop, app-refinements.js measures it and the launcher steps left of
+ * it (mirroring the in-frame tour chips) instead of covering its values.
+ * On phones the sheet is full-width, so the launcher hides instead.
+ */
+html.chip-pane-open:not([data-device="mobile"]) .chip-assistant-launcher {
+  right: var(--chip-pane-clear, 492px);
+}
+
+html[data-device="mobile"].chip-pane-open .chip-assistant-launcher {
+  display: none;
 }
 
 .chip-assistant-launcher:hover {
@@ -97,12 +112,13 @@ html.chip-tour-open .chip-assistant-panel {
   }
 
   .chip-assistant-panel.beside-detail {
-    right: 480px;
+    right: var(--chip-pane-clear, 480px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chip-assistant-panel {
+  .chip-assistant-panel,
+  .chip-assistant-launcher {
     transition: none !important;
     animation: none !important;
   }
