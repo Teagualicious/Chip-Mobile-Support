@@ -39,6 +39,7 @@ def test_required_site_files_exist() -> None:
         "assets/js/tutorial-state.js",
         "assets/js/landing.js",
         "assets/js/mobile-ui.js",
+        "assets/js/app-refinements.js",
         "assets/js/chip-assistant.js",
         ".nojekyll",
         ".github/workflows/pages.yml",
@@ -269,6 +270,46 @@ def test_tour_gains_bonus_steps_for_assistant_and_replay() -> None:
     assert "chip-tour-open" in read("assets/css/assistant.css")
 
 
+def test_app_refinements_cover_the_final_touch_up_round() -> None:
+    # 2026-07-20 "final touch ups": everything lives in one delivery-layer
+    # module so the frozen originals and the mobile-ui.js observer-count
+    # contract stay untouched.
+    for page in ("app.html", "tutorial.html"):
+        assert 'src="./assets/js/app-refinements.js"' in read(page), page
+
+    script = read("assets/js/app-refinements.js")
+    # Population-index metrics leave the dropdown and demographics table.
+    assert '"pct_black", "hispanic_index"' in script
+    # Desktop county labels scale with zoom without touching the mobile tuner.
+    assert "scaleDesktopLabels" in script
+    # Clicking a county gently zooms and centers it.
+    assert "map.easeTo({" in script
+    # AE client book ranks by priority via a wrap of the frozen renderer.
+    assert "clientRowsHTML" in script and "churnTier" in script
+    # Detail sections become dropdowns and both panes get a top switch button.
+    assert "chip-acc" in script
+    assert "chipToAE" in script and "#toProspect" in script
+    # Methodology + Get/Keep/Grow move into a popup where the detail pane is.
+    assert "chipMethodPop" in script
+    assert "methodologyDetails" in script
+
+
+def test_detail_panes_collapse_and_floating_chips_clear_open_panes() -> None:
+    css = read("assets/css/mobile.css")
+    assert ".chip-acc" in css
+    assert ".chip-mode-switchbar" in css
+    assert ".chip-method-pop" in css
+    assert ".chip-drawer-method-link" in css
+    # KEEP pill reads as urgent.
+    assert ".pst--keep" in css
+    # Desktop chips shift left of an open pane; phones hide them instead.
+    assert "--chip-pane-clear" in css
+    assert 'html[data-device="mobile"].chip-pane-open' in css
+    acss = read("assets/css/assistant.css")
+    assert "chip-pane-open" in acss
+    assert "var(--chip-pane-clear" in acss
+
+
 def test_no_api_keys_committed_to_the_delivery_layer() -> None:
     for path in (
         "index.html",
@@ -276,6 +317,7 @@ def test_no_api_keys_committed_to_the_delivery_layer() -> None:
         "tutorial.html",
         "assets/js/chip-assistant.js",
         "assets/js/mobile-ui.js",
+        "assets/js/app-refinements.js",
         "assets/js/landing.js",
         "assets/js/tutorial-state.js",
         "assets/css/assistant.css",
@@ -365,6 +407,7 @@ def test_no_hard_coded_github_pages_owner_or_repo_path() -> None:
             "tutorial.html",
             "assets/js/landing.js",
             "assets/js/mobile-ui.js",
+            "assets/js/app-refinements.js",
             "assets/js/chip-assistant.js",
         )
     )
