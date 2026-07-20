@@ -239,6 +239,14 @@ def test_assistant_chat_is_wired_without_committed_credentials() -> None:
     assert 'stop_reason === "tool_use"' in script
 
 
+def test_tour_detail_step_shows_the_sample_county_on_both_devices() -> None:
+    # Step 6 ("Review the detail panel") must not fall back to the app-bar
+    # highlight: both the mobile and desktop sync branches drive the sample
+    # county selection through the injected helper.
+    script = read("assets/js/mobile-ui.js")
+    assert script.count("frame.contentWindow.__chipTourShowDetailSample()") == 2
+
+
 def test_tour_gains_bonus_steps_for_assistant_and_replay() -> None:
     # The original steps array is closure-local in the frozen tutorial, so
     # the two bonus steps (Ask CHIP, tour replay) are a delivery-layer

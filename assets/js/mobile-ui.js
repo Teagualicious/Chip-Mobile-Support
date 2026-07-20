@@ -1011,7 +1011,23 @@
 
       if (!mobile) {
         doc.body.style.removeProperty("--chip-tour-card-height");
-        clearDetailSample();
+        // Desktop step 6 ("Review the detail panel") previously fell back to
+        // highlighting the app bar when no county was selected. Show the
+        // same Cuyahoga sample the mobile path uses (only when nothing is
+        // already selected), then re-render so the ring moves onto the
+        // now-open panel; the sample clears on step change or tour end.
+        if (stepIndex === detailStepIndex) {
+          try {
+            if (frame.contentWindow.__chipTourShowDetailSample()) {
+              autoSelectedCounty = true;
+            }
+          } catch (error) {
+            // Without the sample the step keeps its app-bar fallback.
+          }
+          requestTourRerender();
+        } else {
+          clearDetailSample();
+        }
         if (drawerTarget) {
           window.cancelAnimationFrame(layoutFrameId);
           layoutFrameId = window.requestAnimationFrame(function revealDesktopTarget() {
