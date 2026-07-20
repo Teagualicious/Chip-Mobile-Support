@@ -124,6 +124,11 @@
     // lexical bindings in the original inline scripts, so the refit has to
     // run as a script inside the child document rather than through
     // `contentWindow` property access.
+    //
+    // 2026-07-20 field report: a single refit at frame load still left a
+    // real iPhone on the world view, so the fit re-asserts itself after the
+    // style loads and on a short backoff — but only while the camera is
+    // clearly at world scale and the user has not touched the map.
     const script = doc.createElement("script");
     script.id = "chip-mobile-map-fit";
     script.textContent = [
@@ -131,9 +136,30 @@
       "  try {",
       "    if (typeof map === \"undefined\" || typeof BOUNDS === \"undefined\") { return; }",
       "    if (!map || typeof map.fitBounds !== \"function\") { return; }",
-      "    map.fitBounds(BOUNDS, {",
-      "      padding: { top: 76, right: 28, bottom: 96, left: 28 },",
-      "      duration: 0",
+      "    var userMoved = false;",
+      "    [\"dragstart\", \"wheel\", \"touchstart\", \"dblclick\"].forEach(function (type) {",
+      "      try { map.on(type, function () { userMoved = true; }); } catch (error) {}",
+      "    });",
+      "    function chipFitMarket() {",
+      "      try {",
+      "        map.fitBounds(BOUNDS, {",
+      "          padding: { top: 76, right: 28, bottom: 96, left: 28 },",
+      "          duration: 0",
+      "        });",
+      "      } catch (error) {}",
+      "    }",
+      "    function chipEnsureMarketView() {",
+      "      if (userMoved) { return; }",
+      "      if (document.documentElement.dataset.device !== \"mobile\") { return; }",
+      "      var z = NaN;",
+      "      try { z = map.getZoom(); } catch (error) {}",
+      "      if (!(z >= 4)) { chipFitMarket(); }",
+      "    }",
+      "    chipFitMarket();",
+      "    try { map.once(\"load\", chipEnsureMarketView); } catch (error) {}",
+      "    try { map.once(\"idle\", chipEnsureMarketView); } catch (error) {}",
+      "    [800, 2000, 4500, 8000].forEach(function (delay) {",
+      "      setTimeout(chipEnsureMarketView, delay);",
       "    });",
       "  } catch (error) {}",
       "})();",
