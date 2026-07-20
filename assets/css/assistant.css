@@ -1,0 +1,358 @@
+/*
+ * CHIP assistant chat (delivery layer, app.html only).
+ * Lives in the parent shell document, overlaying the dashboard iframe, so it
+ * never touches the frozen originals. Styled to the product's navy/aqua
+ * language. Device mode comes from html[data-device], set by mobile-ui.js.
+ */
+
+.chip-assistant-launcher {
+  position: fixed;
+  right: 18px;
+  bottom: 76px;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 999px;
+  background: #0d1b2a;
+  color: #fff;
+  box-shadow: 0 8px 26px rgba(3, 10, 20, 0.5);
+  padding: 10px 16px;
+  font: 700 12px Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.chip-assistant-launcher:hover {
+  background: #1a3350;
+}
+
+.chip-assistant-launcher:focus-visible {
+  outline: 3px solid #66bfff;
+  outline-offset: 2px;
+}
+
+.chip-assistant-launcher .spark {
+  color: #67d6f2;
+  font-size: 13px;
+}
+
+.chip-assistant-panel {
+  position: fixed;
+  right: 18px;
+  bottom: 132px;
+  z-index: 31;
+  display: flex;
+  flex-direction: column;
+  width: min(370px, calc(100vw - 36px));
+  height: min(560px, calc(100dvh - 170px));
+  overflow: hidden;
+  border: 1px solid rgba(94, 164, 204, 0.45);
+  border-radius: 16px;
+  background: #04202f;
+  color: #e6f0f7;
+  box-shadow: 0 24px 60px rgba(0, 8, 16, 0.6);
+  font: 400 13px/1.5 Inter, system-ui, sans-serif;
+}
+
+.chip-assistant-panel[hidden] {
+  display: none;
+}
+
+/*
+ * On wide desktops, dock the chat beside the county detail panel instead of
+ * covering it — the tools open that panel, so the user should see both.
+ * chip-assistant.js toggles the class from the child detail's open state.
+ */
+@media (min-width: 1280px) {
+  .chip-assistant-panel {
+    transition: right 200ms ease;
+  }
+
+  .chip-assistant-panel.beside-detail {
+    right: 480px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip-assistant-panel {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.chip-assistant-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 12px 11px 16px;
+  border-bottom: 1px solid rgba(148, 210, 255, 0.16);
+}
+
+.chip-assistant-head b {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.chip-assistant-mode {
+  margin-right: auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 210, 255, 0.3);
+  color: #9fc2d4;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chip-assistant-mode.is-live {
+  border-color: rgba(110, 231, 183, 0.5);
+  color: #8ee8c0;
+}
+
+.chip-assistant-iconbtn {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(148, 210, 255, 0.3);
+  border-radius: 10px;
+  background: transparent;
+  color: #dcebf4;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chip-assistant-iconbtn:hover {
+  background: rgba(148, 210, 255, 0.12);
+}
+
+.chip-assistant-iconbtn:focus-visible {
+  outline: 3px solid #66bfff;
+  outline-offset: 2px;
+}
+
+.chip-assistant-settings {
+  flex: none;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(148, 210, 255, 0.16);
+  background: rgba(2, 20, 32, 0.55);
+}
+
+.chip-assistant-settings[hidden] {
+  display: none;
+}
+
+.chip-assistant-settings label {
+  display: block;
+  margin-bottom: 4px;
+  color: #9fc2d4;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chip-assistant-settings input,
+.chip-assistant-settings select {
+  width: 100%;
+  margin-bottom: 9px;
+  padding: 9px 10px;
+  border: 1px solid rgba(148, 210, 255, 0.3);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e6f0f7;
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.chip-assistant-settings .row {
+  display: flex;
+  gap: 8px;
+}
+
+.chip-assistant-settings button {
+  flex: 1;
+  padding: 9px 0;
+  border: 1px solid rgba(148, 210, 255, 0.35);
+  border-radius: 9px;
+  background: transparent;
+  color: #e6f0f7;
+  font: 700 12px Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.chip-assistant-settings button.primary {
+  border-color: #0f8ad6;
+  background: #0f8ad6;
+  color: #fff;
+}
+
+.chip-assistant-settings .hint {
+  margin: 6px 0 0;
+  color: #7d97a8;
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.chip-assistant-log {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 14px 10px;
+}
+
+.chip-assistant-msg {
+  max-width: 88%;
+  padding: 9px 12px;
+  border-radius: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.chip-assistant-msg.user {
+  align-self: flex-end;
+  background: #0f8ad6;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.chip-assistant-msg.bot {
+  align-self: flex-start;
+  border: 1px solid rgba(148, 210, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom-left-radius: 4px;
+}
+
+.chip-assistant-msg.bot strong {
+  color: #fff;
+  font-weight: 700;
+}
+
+.chip-assistant-msg.error {
+  align-self: flex-start;
+  border: 1px solid rgba(232, 180, 90, 0.5);
+  background: rgba(120, 80, 20, 0.18);
+  color: #f2d9a7;
+}
+
+.chip-assistant-msg.busy {
+  align-self: flex-start;
+  color: #9fc2d4;
+  border: 1px dashed rgba(148, 210, 255, 0.3);
+}
+
+.chip-assistant-chips {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 0 14px 10px;
+}
+
+.chip-assistant-chips[hidden] {
+  display: none;
+}
+
+.chip-assistant-chips button {
+  padding: 7px 11px;
+  border: 1px solid rgba(148, 210, 255, 0.3);
+  border-radius: 999px;
+  background: transparent;
+  color: #bcd7e5;
+  font: 600 11.5px Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.chip-assistant-chips button:hover {
+  background: rgba(148, 210, 255, 0.12);
+}
+
+.chip-assistant-form {
+  flex: none;
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(148, 210, 255, 0.16);
+}
+
+.chip-assistant-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(148, 210, 255, 0.3);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e6f0f7;
+  font: inherit;
+  font-size: 16px; /* prevents iOS focus zoom */
+}
+
+.chip-assistant-form button {
+  flex: none;
+  min-width: 64px;
+  border: 1px solid #0f8ad6;
+  border-radius: 11px;
+  background: #0f8ad6;
+  color: #fff;
+  font: 700 12.5px Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.chip-assistant-form button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.chip-assistant-form input:focus-visible,
+.chip-assistant-form button:focus-visible,
+.chip-assistant-settings input:focus-visible,
+.chip-assistant-settings select:focus-visible,
+.chip-assistant-settings button:focus-visible,
+.chip-assistant-chips button:focus-visible {
+  outline: 3px solid rgba(39, 183, 223, 0.9);
+  outline-offset: 2px;
+}
+
+/* ---------- phone layout ---------- */
+@media (max-width: 820px) {
+  html[data-device="mobile"] .chip-assistant-launcher {
+    right: 12px;
+    bottom: calc(158px + env(safe-area-inset-bottom, 0px));
+    min-height: 44px;
+  }
+
+  html[data-device="mobile"] .chip-assistant-panel {
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    max-height: 78dvh;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 18px 18px 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .chip-assistant-panel {
+    animation: chip-assistant-in 160ms ease;
+  }
+
+  @keyframes chip-assistant-in {
+    from { transform: translateY(8px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+}
