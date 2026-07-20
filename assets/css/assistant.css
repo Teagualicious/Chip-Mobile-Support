@@ -32,9 +32,21 @@
   outline-offset: 2px;
 }
 
-.chip-assistant-launcher .spark {
-  color: #67d6f2;
-  font-size: 13px;
+.chip-assistant-launcher svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+
+.chip-assistant-launcher svg .bubble {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linejoin: round;
+}
+
+.chip-assistant-launcher svg .sparkle {
+  fill: #67d6f2;
 }
 
 .chip-assistant-panel {

@@ -472,7 +472,12 @@
   launcher.className = "chip-assistant-launcher";
   launcher.setAttribute("aria-haspopup", "dialog");
   launcher.setAttribute("aria-expanded", "false");
-  launcher.innerHTML = '<span class="spark" aria-hidden="true">✦</span>Ask CHIP';
+  launcher.innerHTML =
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path class="bubble" d="M5 4.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8.2L6 20.5v-4H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"></path>' +
+    '<path class="sparkle" d="M12 6.9l1.1 2.5 2.5 1.1-2.5 1.1-1.1 2.5-1.1-2.5-2.5-1.1 2.5-1.1z"></path>' +
+    "</svg>" +
+    "<span>Ask CHIP</span>";
 
   const panel = document.createElement("section");
   panel.className = "chip-assistant-panel";

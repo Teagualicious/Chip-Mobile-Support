@@ -44,6 +44,9 @@
   z-index: 20;
   right: 18px;
   bottom: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 999px;
   background: #0d1b2a;
@@ -53,6 +56,24 @@
   font: 700 12px "Inter", sans-serif;
   cursor: pointer;
   text-decoration: none;
+}
+
+.chip-tour-launch svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: #67d6f2;
+}
+
+.chip-tour-launch svg circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.chip-tour-launch svg path {
+  fill: currentColor;
+  stroke: none;
 }
 
 .chip-tour-launch:hover {
