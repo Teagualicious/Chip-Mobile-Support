@@ -142,6 +142,27 @@ html.chip-pane-open:not([data-device="mobile"]) .tour-launch {
   margin: 0;
 }
 
+/*
+ * The way back to the AE Interface is green — the AE accent — so the
+ * two switch directions read differently at a glance (2026-07-20
+ * follow-up feedback). !important outruns the frozen theme layers'
+ * .btn--go recolors.
+ */
+.chip-btn-ae {
+  background: #15803d !important;
+  border-color: #22a355 !important;
+  color: #fff !important;
+}
+
+.chip-btn-ae:hover {
+  background: #1a9448 !important;
+}
+
+.chip-btn-ae:focus-visible {
+  outline: 3px solid rgba(110, 231, 183, 0.9);
+  outline-offset: 2px;
+}
+
 /* Ranking explainer above the client book table (uses .note styling). */
 .chip-rank-note {
   margin: 6px 0 4px;
@@ -506,6 +527,11 @@ html.chip-pane-open:not([data-device="mobile"]) .tour-launch {
     min-height: 36px;
     padding: 8px 14px;
     font-size: 12.5px;
+  }
+
+  /* Section dropdowns get full-size tap targets on phones. */
+  html[data-device="mobile"] .chip-acc > .chip-acc__head {
+    min-height: 44px;
   }
 
   /*

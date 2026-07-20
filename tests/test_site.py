@@ -280,8 +280,10 @@ def test_app_refinements_cover_the_final_touch_up_round() -> None:
     script = read("assets/js/app-refinements.js")
     # Population-index metrics leave the dropdown and demographics table.
     assert '"pct_black", "hispanic_index"' in script
-    # Desktop county labels scale with zoom without touching the mobile tuner.
-    assert "scaleDesktopLabels" in script
+    # County labels scale with zoom on both devices; the mobile-ui.js
+    # zoom-out tuner keeps ownership below the 7.2 baseline.
+    assert "scaleLabelsWithZoom" in script
+    assert "mobile && z < BASE_ZOOM" in script
     # Clicking a county gently zooms and centers it.
     assert "map.easeTo({" in script
     # AE client book ranks by priority via a wrap of the frozen renderer,
@@ -293,6 +295,7 @@ def test_app_refinements_cover_the_final_touch_up_round() -> None:
     # Detail sections become dropdowns and both panes get a top switch button.
     assert "chip-acc" in script
     assert "chipToAE" in script and "#toProspect" in script
+    assert "chip-btn-ae" in script  # AE-green so the two directions differ
     # Methodology + Get/Keep/Grow move into a popup where the detail pane is.
     assert "chipMethodPop" in script
     assert "methodologyDetails" in script
@@ -307,6 +310,9 @@ def test_detail_panes_collapse_and_floating_chips_clear_open_panes() -> None:
     # KEEP pill reads as urgent, and the rank toggle is styled.
     assert ".pst--keep" in css
     assert ".chip-sort-bar" in css
+    # The AE switch is green and phone tap targets are full size.
+    assert ".chip-btn-ae" in css
+    assert 'html[data-device="mobile"] .chip-acc > .chip-acc__head' in css
     # Desktop chips shift left of an open pane; phones hide them instead.
     assert "--chip-pane-clear" in css
     assert 'html[data-device="mobile"].chip-pane-open' in css
@@ -345,6 +351,19 @@ def test_navigation_affordances_link_home_and_into_the_tour() -> None:
     assert script.count('target = "_top"') >= 3
     # The launcher is desktop-only; mobile uses the drawer's replay link.
     assert ".chip-tour-launch {\n    display: none !important;\n  }" in css
+
+
+def test_mobile_map_fit_reasserts_until_the_market_view_sticks() -> None:
+    # 2026-07-20 field report: one refit at iframe load still left a real
+    # iPhone at the constructor's world-view fallback. The injected fit now
+    # re-checks after style load and on a short backoff, refitting only
+    # while the camera is clearly at world scale (zoom < 4) and the user
+    # has not touched the map.
+    script = read("assets/js/mobile-ui.js")
+    assert "chipEnsureMarketView" in script
+    assert "chipFitMarket" in script
+    assert "userMoved" in script
+    assert "z >= 4" in script
 
 
 def test_mobile_collapses_the_default_expanded_map_attribution() -> None:
