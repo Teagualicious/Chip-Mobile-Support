@@ -1,9 +1,11 @@
 (function initChipAssistant() {
   "use strict";
 
-  // Dashboard shell only — the tutorial keeps its guided tour as the helper.
+  // Runs on the dashboard and tutorial shells (the tour's bonus steps
+  // spotlight the launcher, so it must exist on the tutorial page too).
   const frame = document.getElementById("chip-frame");
-  if (!frame || (document.body.dataset.page || "dashboard") !== "dashboard") {
+  const page = document.body.dataset.page || "dashboard";
+  if (!frame || (page !== "dashboard" && page !== "tutorial")) {
     return;
   }
 

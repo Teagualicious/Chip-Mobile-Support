@@ -986,6 +986,9 @@
       const mobile = detectDeviceMode() === "mobile";
       const active = !tourRoot.hidden;
       doc.body.classList.toggle("chip-tour-active", mobile && active);
+      // Hide the parent-document assistant launcher while the tour runs —
+      // it floats above the tour shade and would sit undimmed over the card.
+      document.documentElement.classList.toggle("chip-tour-open", active);
 
       if (!active) {
         doc.body.style.removeProperty("--chip-tour-card-height");
@@ -1089,6 +1092,245 @@
       window.cancelAnimationFrame(clampFrameId);
       doc.body.style.removeProperty("--chip-tour-card-height");
       doc.body.classList.remove("chip-tour-detail-step");
+      document.documentElement.classList.remove("chip-tour-open");
+    });
+  }
+
+  function setupTourExtension(doc) {
+    // Two delivery-layer bonus steps after the original tour's Finish:
+    // one spotlighting the Ask CHIP assistant, one the tour replay button.
+    // The original steps array is closure-local inside the frozen tutorial,
+    // so the extension is a sibling overlay reusing the tour's own CSS
+    // classes (.tour-shade/.tour-focus/.tour-card render identically).
+    if (pageMode !== "tutorial") {
+      return;
+    }
+    const tourRoot = doc.getElementById("tourRoot");
+    const tourNext = doc.getElementById("tourNext");
+    if (!tourRoot || !tourNext) {
+      return;
+    }
+
+    const win = frame.contentWindow;
+    let extra = doc.getElementById("chipTourExtra");
+    if (!extra) {
+      extra = doc.createElement("div");
+      extra.id = "chipTourExtra";
+      extra.hidden = true;
+      extra.innerHTML =
+        '<div class="tour-shade" data-side="top"></div>' +
+        '<div class="tour-shade" data-side="left"></div>' +
+        '<div class="tour-shade" data-side="right"></div>' +
+        '<div class="tour-shade" data-side="bottom"></div>' +
+        '<div class="tour-focus" aria-hidden="true"></div>' +
+        '<section class="tour-card" role="dialog" aria-modal="true" tabindex="-1">' +
+        '<button class="tour-close" type="button" aria-label="Close tour">&times;</button>' +
+        '<div class="tour-kicker"></div><h2 class="tour-title"></h2><p class="tour-copy"></p>' +
+        '<div class="tour-progress" aria-hidden="true"></div>' +
+        '<div class="tour-actions">' +
+        '<button class="tour-btn" data-nav="back" type="button">Back</button>' +
+        '<button class="tour-btn primary" data-nav="next" type="button">Next</button>' +
+        "</div></section>";
+      doc.body.appendChild(extra);
+    }
+
+    const card = extra.querySelector(".tour-card");
+    const focusRing = extra.querySelector(".tour-focus");
+    const kickerEl = extra.querySelector(".tour-kicker");
+    const titleEl = extra.querySelector(".tour-title");
+    const copyEl = extra.querySelector(".tour-copy");
+    const progressEl = extra.querySelector(".tour-progress");
+    const backBtn = extra.querySelector('[data-nav="back"]');
+    const nextBtn = extra.querySelector('[data-nav="next"]');
+    const shades = {};
+    extra.querySelectorAll(".tour-shade").forEach(function collect(el) {
+      shades[el.dataset.side] = el;
+    });
+
+    function fallbackRect() {
+      return {
+        left: win.innerWidth - 170,
+        top: win.innerHeight - 130,
+        right: win.innerWidth - 14,
+        bottom: win.innerHeight - 80,
+        width: 156,
+        height: 50,
+      };
+    }
+
+    const bonusSteps = [
+      {
+        title: "Ask CHIP anything",
+        copy: "This chat answers questions like “How is Summit County doing?” or “Top prospects in Erie” — and moves the map while it answers. It works out of the box in demo mode; add an API key in its settings for free-form questions.",
+        rect: function rectAssistant() {
+          // The launcher lives in the parent document; the iframe fills the
+          // viewport, so parent and child coordinates line up 1:1.
+          const launcher = document.querySelector(".chip-assistant-launcher");
+          return launcher ? launcher.getBoundingClientRect() : null;
+        },
+      },
+      {
+        title: "Replay this tour anytime",
+        copy: "The Tutorial button restarts this walkthrough whenever you need a refresher. The dashboard has its own doorway too — “Take the tour”, plus “Replay the guided tour” inside the mobile controls drawer.",
+        rect: function rectReplay() {
+          const button = doc.getElementById("tourLaunch");
+          return button ? button.getBoundingClientRect() : null;
+        },
+      },
+    ];
+
+    let bonusIndex = 0;
+    let bonusActive = false;
+
+    function setBox(el, left, top, width, height) {
+      el.style.left = left + "px";
+      el.style.top = top + "px";
+      el.style.width = Math.max(0, width) + "px";
+      el.style.height = Math.max(0, height) + "px";
+    }
+
+    function renderBonus() {
+      if (!bonusActive) {
+        return;
+      }
+      const step = bonusSteps[bonusIndex];
+      let rect = null;
+      try {
+        rect = step.rect();
+      } catch (error) {
+        rect = null;
+      }
+      if (!rect || !rect.width) {
+        rect = fallbackRect();
+      }
+      const pad = 7;
+      const left = Math.max(0, rect.left - pad);
+      const top = Math.max(0, rect.top - pad);
+      const right = Math.min(win.innerWidth, rect.right + pad);
+      const bottom = Math.min(win.innerHeight, rect.bottom + pad);
+      setBox(shades.top, 0, 0, win.innerWidth, top);
+      setBox(shades.left, 0, top, left, bottom - top);
+      setBox(shades.right, right, top, win.innerWidth - right, bottom - top);
+      setBox(shades.bottom, 0, bottom, win.innerWidth, win.innerHeight - bottom);
+      setBox(focusRing, left, top, right - left, bottom - top);
+
+      kickerEl.textContent = "Bonus " + (bonusIndex + 1) + " of " + bonusSteps.length;
+      titleEl.textContent = step.title;
+      copyEl.textContent = step.copy;
+      progressEl.innerHTML = bonusSteps
+        .map(function dot(_, i) {
+          return '<span class="tour-dot ' + (i <= bonusIndex ? "on" : "") + '"></span>';
+        })
+        .join("");
+      backBtn.disabled = bonusIndex === 0;
+      nextBtn.textContent = bonusIndex === bonusSteps.length - 1 ? "Done" : "Next";
+
+      // Desktop: card above the highlighted corner. Mobile CSS repositions
+      // the card (bottom sheet, moved to the top for these corner targets).
+      const cardWidth = Math.min(390, win.innerWidth - 28);
+      const cardHeight = card.offsetHeight || 250;
+      const cardLeft = Math.max(14, win.innerWidth - cardWidth - 14);
+      let cardTop = top - cardHeight - 18;
+      if (cardTop < 14) {
+        cardTop = Math.max(14, Math.min(win.innerHeight - cardHeight - 14, bottom + 18));
+      }
+      card.style.left = cardLeft + "px";
+      card.style.top = cardTop + "px";
+      doc.body.classList.toggle("chip-tour-detail-step", detectDeviceMode() === "mobile");
+    }
+
+    function startBonus() {
+      bonusActive = true;
+      bonusIndex = 0;
+      extra.hidden = false;
+      renderBonus();
+      try {
+        card.focus();
+      } catch (error) {
+        // Focus is a nicety; the overlay still renders without it.
+      }
+    }
+
+    function endBonus() {
+      bonusActive = false;
+      extra.hidden = true;
+      doc.body.classList.remove("chip-tour-detail-step");
+    }
+
+    function handleDocClick(event) {
+      const target = event.target instanceof win.Element ? event.target : null;
+      if (!target) {
+        return;
+      }
+      if (target.closest("#tourNext")) {
+        // The original tour's handler runs first (registered at parse). If
+        // the click was Finish, the root is hidden by the time this runs.
+        window.setTimeout(function maybeStartBonus() {
+          if (tourRoot.hidden && !bonusActive) {
+            startBonus();
+          }
+        }, 0);
+      } else if (target.closest("#tourLaunch")) {
+        endBonus();
+      }
+    }
+
+    function handleBonusClick(event) {
+      const target = event.target instanceof win.Element ? event.target : null;
+      if (!target) {
+        return;
+      }
+      if (target.closest(".tour-close")) {
+        endBonus();
+        return;
+      }
+      const nav = target.closest("[data-nav]");
+      if (!nav) {
+        return;
+      }
+      if (nav.dataset.nav === "next") {
+        if (bonusIndex >= bonusSteps.length - 1) {
+          endBonus();
+        } else {
+          bonusIndex += 1;
+          renderBonus();
+        }
+      } else if (bonusIndex > 0) {
+        bonusIndex -= 1;
+        renderBonus();
+      }
+    }
+
+    function handleBonusKeys(event) {
+      if (!bonusActive) {
+        return;
+      }
+      if (event.key === "Escape") {
+        endBonus();
+      } else if (event.key === "ArrowRight" || event.key === "Enter") {
+        event.preventDefault();
+        nextBtn.click();
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        backBtn.click();
+      }
+    }
+
+    function handleBonusResize() {
+      renderBonus();
+    }
+
+    doc.addEventListener("click", handleDocClick);
+    extra.addEventListener("click", handleBonusClick);
+    doc.addEventListener("keydown", handleBonusKeys);
+    win.addEventListener("resize", handleBonusResize);
+
+    cleanupCallbacks.push(function cleanupTourExtension() {
+      endBonus();
+      doc.removeEventListener("click", handleDocClick);
+      extra.removeEventListener("click", handleBonusClick);
+      doc.removeEventListener("keydown", handleBonusKeys);
+      win.removeEventListener("resize", handleBonusResize);
     });
   }
 
@@ -1128,6 +1370,7 @@
     setupAttributionCollapse(childDocument);
     enhanceDetails(childDocument);
     setupTourMobileLayout(childDocument);
+    setupTourExtension(childDocument);
     setupTutorialCompletion(childDocument);
     scheduleMapResize();
   }

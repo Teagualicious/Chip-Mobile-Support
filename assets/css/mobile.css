@@ -192,7 +192,7 @@
   }
 
   html[data-device="mobile"] .chip-drawer-header b {
-    font-size: 13px;
+    font-size: 14px;
     letter-spacing: 0.02em;
   }
 
@@ -252,7 +252,7 @@
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     text-align: left;
     cursor: pointer;
@@ -282,7 +282,7 @@
     padding: 11px 0;
     min-height: 44px;
     color: inherit;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     text-decoration: none;
     touch-action: manipulation;
@@ -299,7 +299,7 @@
   html[data-device="mobile"] .chip-drawer-note {
     display: block;
     margin: 10px 0 0;
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 600;
     opacity: 0.62;
   }
@@ -567,12 +567,27 @@
     margin: 0 auto;
   }
 
+  html[data-device="mobile"] .tour-kicker {
+    font-size: 11.5px;
+  }
+
+  html[data-device="mobile"] .tour-title {
+    font-size: 20px;
+    line-height: 1.2;
+  }
+
   html[data-device="mobile"] .tour-copy {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  html[data-device="mobile"] .tour-btn {
+    font-size: 13px;
   }
 
   html[data-device="mobile"] .tour-btn {
