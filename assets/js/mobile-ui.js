@@ -486,7 +486,12 @@
       launch.href = "tutorial.html";
       launch.target = "_top";
       launch.setAttribute("aria-label", "Take the guided tour");
-      launch.innerHTML = "?&nbsp;&nbsp;Take the tour";
+      launch.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+        '<circle cx="12" cy="12" r="9"></circle>' +
+        '<path d="M10.2 8.6v6.8l5.8-3.4z"></path>' +
+        "</svg>" +
+        "<span>Take the tour</span>";
       doc.body.appendChild(launch);
     }
   }
