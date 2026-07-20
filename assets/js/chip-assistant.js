@@ -26,14 +26,19 @@
 
   const SYSTEM_PROMPT = [
     "You are the CHIP assistant embedded in the Cleveland-Akron (Canton) market",
-    "visualizer demo. Answer questions about the 17 DMA counties using ONLY the",
-    "provided tools; never invent numbers. Every client, prospect, revenue and",
-    "budget figure is illustrative sample data - say so briefly whenever you",
-    "quote sales figures. Both tools also focus the county on the map for the",
-    "user, so refer to what they now see. Keep answers short: two to five",
-    "sentences, or a compact list for prospects. Plain text only, no markdown",
-    "headings or tables. If a question is outside this market demo, say what",
-    "you can help with instead. Counties: " + COUNTIES.join(", ") + ".",
+    "visualizer demo. Answer from the provided tools only - never invent",
+    "numbers. All client, prospect, revenue and budget figures are illustrative",
+    "sample data; add a brief 'sample data' note when quoting them.",
+    "Style: talk like a sharp teammate, not a report. Lead with a one-sentence",
+    "takeaway in **bold** that interprets the data (ahead/behind plan, strong or",
+    "weak ground, who to call first). Then at most three short bullet lines",
+    "starting with '• ', each carrying only the numbers that answer the",
+    "question, rounded ($4.1M, 38%). Skip stats the user didn't ask about.",
+    "Stay under 70 words unless they ask for more detail. The only formatting",
+    "available is **bold** and '• ' bullets - no headings, tables or other",
+    "markdown. The tools also select the county on the map, so you can say",
+    "it's on the map now. If a question is outside this market demo, say in",
+    "one line what you can help with. Counties: " + COUNTIES.join(", ") + ".",
   ].join(" ");
 
   const TOOLS = [
@@ -68,7 +73,7 @@
         type: "object",
         properties: {
           county: { type: "string", description: "County name" },
-          limit: { type: "integer", description: "How many targets, 1-10 (default 5)" },
+          limit: { type: "integer", description: "How many targets, 1-10 (default 3)" },
         },
         required: ["county"],
         additionalProperties: false,
@@ -201,7 +206,7 @@
       "        var f = featureByName(name);",
       "        if (!f) { return { error: \"Unknown county: \" + name }; }",
       "        var fips = f.properties.fips;",
-      "        var n = Math.max(1, Math.min(10, Number(limit) || 5));",
+      "        var n = Math.max(1, Math.min(10, Number(limit) || 3));",
       "        var list = (PROSPECTS[fips] || [])",
       "          .filter(function (b) { return b.isGet; })",
       "          .sort(function (a, b) { return b.getScore - a.getScore; })",
@@ -363,36 +368,65 @@
 
   function overviewText(data) {
     const c = data.clients;
-    return [
-      data.county + " — illustrative sample data.",
-      "Population " + (data.population || 0).toLocaleString() +
-        " · median HH income " + money(data.median_household_income) +
-        " · tailwind #" + data.tailwind_rank_of_17 + " of 17 (score " + data.tailwind_score + ").",
-      "Book: " + c.count + " clients, " + money(c.booked_annual_revenue) + " booked (" +
-        c.grow + " Grow / " + c.keep + " Keep), " + c.share_of_wallet_pct +
-        "% share of wallet, " + c.projected_churn_pct + "% projected churn.",
-      "Budget: " + money(data.annual_budget_target) + " target, " +
-        data.budget_attainment_pct + "% attainment.",
-      "Prospecting: " + data.open_get_prospects + " open Get targets (" +
-        data.dma_priority_get_targets + " DMA-priority) out of " +
-        data.tracked_businesses + " tracked businesses; est. local ad spend " +
-        money(data.estimated_local_ad_spend) + ".",
-      "I've selected it on the map.",
-    ].join("\n");
+    const attainment = data.budget_attainment_pct;
+    const verdict = attainment === null
+      ? "ranks #" + data.tailwind_rank_of_17 + " of 17 on tailwind"
+      : (attainment >= 100
+        ? "is ahead of plan (" + Math.round(attainment) + "% of budget)"
+        : "is behind plan (" + Math.round(attainment) + "% of budget)")
+        + ", on #" + data.tailwind_rank_of_17 + "-of-17 ground";
+    const lines = ["**" + data.county + " " + verdict + ".**", ""];
+    if (c.count) {
+      lines.push("• " + c.count + " clients, " + money(c.booked_annual_revenue) +
+        " booked (" + c.grow + " Grow / " + c.keep + " Keep)");
+      if (c.share_of_wallet_pct !== null) {
+        lines.push("• " + Math.round(c.share_of_wallet_pct) + "% share of wallet, " +
+          Math.round(c.projected_churn_pct) + "% projected churn");
+      }
+    } else {
+      lines.push("• No active clients on the book yet");
+    }
+    lines.push("• " + data.open_get_prospects + " open Get targets — " +
+      data.dma_priority_get_targets + " worth calling first");
+    lines.push("");
+    lines.push("It's on the map now. Sample data throughout.");
+    return lines.join("\n");
   }
 
   function prospectsText(data) {
-    const lines = [data.county + " — top Get targets (illustrative sample data):"];
+    const first = data.top_get_targets[0];
+    if (!first) {
+      return "**No open prospects left in " + data.county + "** — the whole tracked universe is already on the book. Sample data.";
+    }
+    const lines = ["**In " + data.county + ", start with " + first.name + ".**", ""];
     data.top_get_targets.forEach(function (p, index) {
       lines.push(
-        (index + 1) + ". " + p.name + " (" + p.vertical + ") — Get score " +
-        p.get_score + (p.dma_priority ? " · DMA priority" : "") +
-        ", est. budget " + money(p.estimated_ad_budget) +
-        ", currently with " + (p.current_budget_holder || "n/a") + ".",
+        (index + 1) + ". **" + p.name + "**" + (p.dma_priority ? " ★" : "") +
+        " — " + p.vertical + ", ~" + money(p.estimated_ad_budget) +
+        " budget, now with " + (p.current_budget_holder || "no measured media"),
       );
     });
-    lines.push("The map is now in Prospecting mode on " + data.county + ".");
+    lines.push("");
+    lines.push(
+      (data.top_get_targets.some(function (p) { return p.dma_priority; }) ? "★ = top quartile DMA-wide. " : "") +
+      "They're on the map in Prospecting mode. Sample data.",
+    );
     return lines.join("\n");
+  }
+
+  function compareText(a, b) {
+    return [
+      "**" + a.county.replace(" County", "") + " vs " + b.county.replace(" County", "") + ":**",
+      "",
+      "• Tailwind: #" + a.tailwind_rank_of_17 + " vs #" + b.tailwind_rank_of_17 + " of 17",
+      "• Booked: " + money(a.clients.booked_annual_revenue) + " (" + a.clients.count +
+        " clients) vs " + money(b.clients.booked_annual_revenue) + " (" + b.clients.count + ")",
+      "• Budget attainment: " + Math.round(a.budget_attainment_pct || 0) + "% vs " +
+        Math.round(b.budget_attainment_pct || 0) + "%",
+      "• Open Get targets: " + a.open_get_prospects + " vs " + b.open_get_prospects,
+      "",
+      b.county + " is on the map. Sample data.",
+    ].join("\n");
   }
 
   function answerLocally(question) {
@@ -405,23 +439,30 @@
 
     if (!names.length) {
       return [
-        "Demo mode can answer two kinds of question:",
-        "· \"How is Summit County doing?\" — county overview",
-        "· \"Top prospects in Erie\" — ranked Get targets",
-        "Add an Anthropic API key in settings (gear icon) for free-form questions answered by Claude.",
+        "Try me on:",
+        "• \"How is Summit County doing?\"",
+        "• \"Top prospects in Erie\"",
+        "• \"Compare Cuyahoga and Stark\"",
+        "",
+        "Add an API key (⚙) and Claude answers free-form questions too.",
       ].join("\n");
     }
 
     if (wantsProspects) {
-      const data = api.topProspects(names[0], 5);
+      const data = api.topProspects(names[0], 3);
       return data.error ? data.error : prospectsText(data);
     }
 
-    const parts = names.slice(0, 2).map(function (name) {
-      const data = api.countyOverview(name);
-      return data.error ? data.error : overviewText(data);
-    });
-    return parts.join("\n\n");
+    if (names.length >= 2) {
+      const a = api.countyOverview(names[0]);
+      const b = api.countyOverview(names[1]);
+      if (!a.error && !b.error) {
+        return compareText(a, b);
+      }
+    }
+
+    const data = api.countyOverview(names[0]);
+    return data.error ? data.error : overviewText(data);
   }
 
   /* ---------------- UI ---------------- */
@@ -498,10 +539,31 @@
     }
   }
 
+  // Bot bubbles support exactly one bit of formatting: **bold** spans.
+  // Everything is built from text nodes, so replies can never inject markup.
+  function renderRich(element, text) {
+    String(text).split("**").forEach(function (chunk, index) {
+      if (!chunk) {
+        return;
+      }
+      if (index % 2) {
+        const strong = document.createElement("strong");
+        strong.textContent = chunk;
+        element.appendChild(strong);
+      } else {
+        element.appendChild(document.createTextNode(chunk));
+      }
+    });
+  }
+
   function addMessage(kind, text) {
     const bubble = document.createElement("div");
     bubble.className = "chip-assistant-msg " + kind;
-    bubble.textContent = text;
+    if (kind === "bot") {
+      renderRich(bubble, text);
+    } else {
+      bubble.textContent = text;
+    }
     log.appendChild(bubble);
     log.scrollTop = log.scrollHeight;
     return bubble;
@@ -512,10 +574,7 @@
     launcher.setAttribute("aria-expanded", "true");
     launcher.hidden = true;
     if (!log.childElementCount) {
-      addMessage(
-        "bot",
-        "Hi — ask me about any of the 17 Cleveland–Akron counties and I'll answer from the dashboard's sample data and show it on the map.",
-      );
+      addMessage("bot", "Hi! Ask about any of the 17 counties — I'll pull the numbers and show it on the map.");
     }
     syncMode();
     input.focus({ preventScroll: true });
