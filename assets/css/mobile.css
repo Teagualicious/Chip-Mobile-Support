@@ -39,11 +39,16 @@
  * "? Take the tour" launcher on the dashboard, cloned from the tutorial
  * page's own .tour-launch styling so the pair reads as one system.
  */
+/*
+ * Floating-action ladder (2026-07-20 feedback): attribution, zoom,
+ * Ask CHIP, then the tour chip stack up the right edge without overlaps.
+ * Offsets pair with .chip-assistant-launcher in assistant.css.
+ */
 .chip-tour-launch {
   position: fixed;
   z-index: 20;
   right: 18px;
-  bottom: 28px;
+  bottom: 190px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -83,6 +88,16 @@
 .chip-tour-launch:focus-visible {
   outline: 3px solid #66bfff;
   outline-offset: 2px;
+}
+
+/*
+ * The tutorial page's own "? Tutorial" launcher joins the same ladder —
+ * its frozen position (right 18 / bottom 28) collided with the zoom
+ * control and attribution strip.
+ */
+.tour-launch {
+  right: 18px;
+  bottom: 190px;
 }
 
 @media (max-width: 820px), (pointer: coarse) and (max-width: 1100px) {
@@ -426,6 +441,13 @@
 
   html[data-device="mobile"] .chip-tour-launch {
     display: none !important;
+  }
+
+  /* Ladder on phones: the info toggle and zoom stack up to ~150px, so
+     Ask CHIP sits at 160px (assistant.css) and the replay chip above it. */
+  html[data-device="mobile"] .tour-launch {
+    right: 12px;
+    bottom: calc(214px + var(--chip-safe-bottom));
   }
 
   html[data-device="mobile"] .chip-mobile-backdrop {

@@ -1145,6 +1145,7 @@
         '<div class="tour-progress" aria-hidden="true"></div>' +
         '<div class="tour-actions">' +
         '<button class="tour-btn" data-nav="back" type="button">Back</button>' +
+        '<button class="tour-btn" data-nav="skip" type="button">Skip tour</button>' +
         '<button class="tour-btn primary" data-nav="next" type="button">Next</button>' +
         "</div></section>";
       doc.body.appendChild(extra);
@@ -1166,10 +1167,10 @@
     function fallbackRect() {
       return {
         left: win.innerWidth - 170,
-        top: win.innerHeight - 130,
-        right: win.innerWidth - 14,
-        bottom: win.innerHeight - 80,
-        width: 156,
+        top: win.innerHeight - 235,
+        right: win.innerWidth - 12,
+        bottom: win.innerHeight - 185,
+        width: 158,
         height: 50,
       };
     }
@@ -1197,6 +1198,58 @@
 
     let bonusIndex = 0;
     let bonusActive = false;
+
+    // The whole walkthrough reads as one continuous nine-step tour: the
+    // frozen tour renders "Step N of 7", seven dots, and "Finish" on its
+    // last step, so every render gets relabeled ("of 9", nine dots, and
+    // "Next" on step 7 — the real Finish lives on step 9).
+    const ORIGINAL_STEPS = 7;
+    const TOTAL_STEPS = ORIGINAL_STEPS + bonusSteps.length;
+    const mainKicker = doc.getElementById("tourKicker");
+    const mainProgress = doc.getElementById("tourProgress");
+
+    function dotsHtml(reachedCount) {
+      let html = "";
+      for (let i = 0; i < TOTAL_STEPS; i += 1) {
+        html += '<span class="tour-dot ' + (i < reachedCount ? "on" : "") + '"></span>';
+      }
+      return html;
+    }
+
+    function relabelMainTour() {
+      const match = /^Step (\d+) of (\d+)/.exec(mainKicker.textContent || "");
+      if (!match) {
+        return;
+      }
+      const stepNumber = Number(match[1]);
+      if (match[2] !== String(TOTAL_STEPS)) {
+        mainKicker.textContent = "Step " + stepNumber + " of " + TOTAL_STEPS;
+      }
+      if (mainProgress && mainProgress.childElementCount === ORIGINAL_STEPS) {
+        mainProgress.innerHTML = dotsHtml(stepNumber);
+      }
+      if (stepNumber === ORIGINAL_STEPS && tourNext.textContent === "Finish") {
+        tourNext.textContent = "Next";
+      }
+    }
+
+    function returnToMainTour() {
+      // The frozen tour always restarts at step 1, so Back from step 8
+      // replays it and advances synchronously — one paint, landing on 7.
+      endBonus();
+      try {
+        const launch = doc.getElementById("tourLaunch");
+        if (!launch) {
+          return;
+        }
+        launch.click();
+        for (let i = 1; i < ORIGINAL_STEPS; i += 1) {
+          tourNext.click();
+        }
+      } catch (error) {
+        // Worst case the tour restarts at step 1.
+      }
+    }
 
     function setBox(el, left, top, width, height) {
       el.style.left = left + "px";
@@ -1230,16 +1283,12 @@
       setBox(shades.bottom, 0, bottom, win.innerWidth, win.innerHeight - bottom);
       setBox(focusRing, left, top, right - left, bottom - top);
 
-      kickerEl.textContent = "Bonus " + (bonusIndex + 1) + " of " + bonusSteps.length;
+      kickerEl.textContent = "Step " + (ORIGINAL_STEPS + bonusIndex + 1) + " of " + TOTAL_STEPS;
       titleEl.textContent = step.title;
       copyEl.textContent = step.copy;
-      progressEl.innerHTML = bonusSteps
-        .map(function dot(_, i) {
-          return '<span class="tour-dot ' + (i <= bonusIndex ? "on" : "") + '"></span>';
-        })
-        .join("");
-      backBtn.disabled = bonusIndex === 0;
-      nextBtn.textContent = bonusIndex === bonusSteps.length - 1 ? "Done" : "Next";
+      progressEl.innerHTML = dotsHtml(ORIGINAL_STEPS + bonusIndex + 1);
+      backBtn.disabled = false;
+      nextBtn.textContent = bonusIndex === bonusSteps.length - 1 ? "Finish" : "Next";
 
       // Desktop: card above the highlighted corner. Mobile CSS repositions
       // the card (bottom sheet, moved to the top for these corner targets).
@@ -1311,9 +1360,13 @@
           bonusIndex += 1;
           renderBonus();
         }
+      } else if (nav.dataset.nav === "skip") {
+        endBonus();
       } else if (bonusIndex > 0) {
         bonusIndex -= 1;
         renderBonus();
+      } else {
+        returnToMainTour();
       }
     }
 
@@ -1341,8 +1394,15 @@
     doc.addEventListener("keydown", handleBonusKeys);
     win.addEventListener("resize", handleBonusResize);
 
+    // The frozen tour rewrites the kicker on every render, so observing it
+    // re-applies the nine-step relabel after each step change and resize.
+    const relabelObserver = new frame.contentWindow.MutationObserver(relabelMainTour);
+    relabelObserver.observe(mainKicker, { childList: true, characterData: true, subtree: true });
+    relabelMainTour();
+
     cleanupCallbacks.push(function cleanupTourExtension() {
       endBonus();
+      relabelObserver.disconnect();
       doc.removeEventListener("click", handleDocClick);
       extra.removeEventListener("click", handleBonusClick);
       doc.removeEventListener("keydown", handleBonusKeys);
