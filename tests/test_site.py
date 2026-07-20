@@ -257,6 +257,12 @@ def test_tour_gains_bonus_steps_for_assistant_and_replay() -> None:
     assert '"Ask CHIP anything"' in script
     assert '"Replay this tour anytime"' in script
     assert "chip-assistant-launcher" in script  # bonus step measures the real button
+    # The walkthrough reads as one continuous nine-step tour: the frozen
+    # tour's "Step N of 7" / seven dots / "Finish" renders are relabeled,
+    # and Back from step 8 replays the main tour to land on step 7.
+    assert "relabelMainTour" in script
+    assert "TOTAL_STEPS" in script
+    assert "returnToMainTour" in script
     # The assistant hides while the original tour runs (it floats above the
     # shade) and returns as the bonus step's highlight target.
     assert "chip-tour-open" in script
@@ -328,8 +334,8 @@ def test_mobile_tour_adapts_to_short_screens() -> None:
     assert 'scrollIntoView({ block: "center", inline: "nearest" })' in script
     # Observers must come from the child window so they survive iframe
     # reloads: controls, map-state legend, detail, tutorial-completion,
-    # tour state, tour card.
-    assert script.count("new frame.contentWindow.MutationObserver") == 6
+    # tour state, tour card, nine-step tour relabel.
+    assert script.count("new frame.contentWindow.MutationObserver") == 7
     # Desktop tour responsiveness: reveal panel targets and clamp the card.
     assert 'scrollIntoView({ block: "nearest", inline: "nearest" })' in script
     assert "scheduleCardClamp" in script
