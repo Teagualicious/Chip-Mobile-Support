@@ -143,15 +143,32 @@
 
   /* ---------- 5: client book ranked by priority ---------- */
 
+  // Toggled by the "Rank by" control in the client book; remembered for
+  // the visit like the accordion state.
+  let clientSortMode = "churn";
+
+  const SORT_MODES = {
+    churn: {
+      label: "Churn risk",
+      note: "Ranked by revenue at risk — highest churn first, KEEP before GROW, then spend.",
+    },
+    growth: {
+      label: "Growth upside",
+      note: "Ranked by growth upside — strongest posture score first, then spend.",
+    },
+  };
+
   function installClientRanking(win) {
     const original = win.clientRowsHTML;
     if (typeof original !== "function" || original.chipRanked) {
       return;
     }
 
-    // Priority = revenue in danger first: churn tier (the original's own
-    // High >= 22% / Med >= 12% cut points), KEEP-before-GROW inside a
-    // tier because KEEP means "defend now", then book size.
+    // Churn risk = revenue in danger first: churn tier (the original's
+    // own High >= 22% / Med >= 12% cut points), KEEP-before-GROW inside
+    // a tier because KEEP means "defend now", then book size.
+    // Growth upside = the app's own posture score descending (positive
+    // means GROW: wallet room and momentum), then book size.
     const churnTier = (client) =>
       client.projectedChurn >= 22 ? 3 : client.projectedChurn >= 12 ? 2 : 1;
     const bookSize = (client) => client.totalSpend || client.spend || 0;
@@ -161,6 +178,12 @@
         return original(cs);
       }
       const sorted = cs.slice().sort(function (a, b) {
+        if (clientSortMode === "growth") {
+          return (
+            (b.postureScore || 0) - (a.postureScore || 0) ||
+            bookSize(b) - bookSize(a)
+          );
+        }
         return (
           churnTier(b) - churnTier(a) ||
           (b.posture === "KEEP") - (a.posture === "KEEP") ||
@@ -218,7 +241,7 @@
     header.insertAdjacentElement("afterend", bar);
   }
 
-  function addClientRankingNote(doc, scroll) {
+  function addClientSortControls(doc, scroll) {
     const tbody = scroll.querySelector("#clientTableBody");
     if (!tbody) {
       return;
@@ -227,10 +250,40 @@
     if (!table || !tbody.querySelector("td:nth-child(2)")) {
       return;
     }
+
+    const bar = doc.createElement("div");
+    bar.className = "chip-sort-bar";
+    bar.setAttribute("role", "group");
+    bar.setAttribute("aria-label", "Rank the client book by");
+    const label = doc.createElement("span");
+    label.className = "chip-sort-bar__label";
+    label.textContent = "Rank by";
+    bar.appendChild(label);
+
+    Object.keys(SORT_MODES).forEach(function (mode) {
+      const button = doc.createElement("button");
+      button.type = "button";
+      button.textContent = SORT_MODES[mode].label;
+      button.setAttribute("aria-pressed", String(clientSortMode === mode));
+      button.addEventListener("click", function () {
+        if (clientSortMode === mode) {
+          return;
+        }
+        clientSortMode = mode;
+        try {
+          // Re-render through the frozen pipeline; the wrapped renderer
+          // re-applies every refinement, including this control.
+          frame.contentWindow.refreshOpenDetail();
+        } catch (error) {}
+      });
+      bar.appendChild(button);
+    });
+
     const note = doc.createElement("div");
     note.className = "note chip-rank-note";
-    note.textContent =
-      "Ranked by priority — highest churn risk first, then spend.";
+    note.textContent = SORT_MODES[clientSortMode].note;
+
+    table.insertAdjacentElement("beforebegin", bar);
     table.insertAdjacentElement("beforebegin", note);
   }
 
@@ -280,7 +333,7 @@
     }
     scroll.dataset.chipRefined = "true";
     moveSwitchButtonsToTop(doc, scroll);
-    addClientRankingNote(doc, scroll);
+    addClientSortControls(doc, scroll);
     collapseSections(doc, scroll);
   }
 
