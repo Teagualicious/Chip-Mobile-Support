@@ -35,9 +35,11 @@ def test_required_site_files_exist() -> None:
         "assets/css/landing.css",
         "assets/css/frame-shell.css",
         "assets/css/mobile.css",
+        "assets/css/assistant.css",
         "assets/js/tutorial-state.js",
         "assets/js/landing.js",
         "assets/js/mobile-ui.js",
+        "assets/js/chip-assistant.js",
         ".nojekyll",
         ".github/workflows/pages.yml",
     }
@@ -217,6 +219,41 @@ def test_mobile_detail_sheet_opens_half_height_with_grab_handle() -> None:
     assert re.search(r"html\[data-device=\"mobile\"\] \.detail \{[^}]*display", css) is None
 
 
+def test_assistant_chat_is_wired_without_committed_credentials() -> None:
+    html = read("app.html")
+    assert 'href="./assets/css/assistant.css"' in html
+    assert 'src="./assets/js/chip-assistant.js"' in html
+    # The tutorial keeps its guided tour as the helper; no chat there.
+    assert "chip-assistant" not in read("tutorial.html")
+
+    script = read("assets/js/chip-assistant.js")
+    # Direct browser calls to the Claude API require this opt-in header, and
+    # the key is entered at runtime (session storage, guarded) — never shipped.
+    assert "anthropic-dangerous-direct-browser-access" in script
+    assert "anthropic-version" in script
+    assert "claude-opus-4-8" in script
+    assert "sessionStorage" in script
+    assert "answerLocally" in script  # keyless demo-mode fallback
+    assert 'stop_reason === "refusal"' in script
+    assert 'stop_reason === "tool_use"' in script
+
+
+def test_no_api_keys_committed_to_the_delivery_layer() -> None:
+    for path in (
+        "index.html",
+        "app.html",
+        "tutorial.html",
+        "assets/js/chip-assistant.js",
+        "assets/js/mobile-ui.js",
+        "assets/js/landing.js",
+        "assets/js/tutorial-state.js",
+        "assets/css/assistant.css",
+        "README.md",
+        "STATUS.md",
+    ):
+        assert "sk-ant-" not in read(path), f"credential-like string in {path}"
+
+
 def test_navigation_affordances_link_home_and_into_the_tour() -> None:
     # Approved desktop-visible additions from the 2026-07-19 UI review: the
     # brand links home with no resting visual change, phones get a Home chip
@@ -297,6 +334,7 @@ def test_no_hard_coded_github_pages_owner_or_repo_path() -> None:
             "tutorial.html",
             "assets/js/landing.js",
             "assets/js/mobile-ui.js",
+            "assets/js/chip-assistant.js",
         )
     )
     assert not re.search(r"https://[^\s\"']+\.github\.io/", text)
