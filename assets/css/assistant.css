@@ -26,20 +26,15 @@
   padding: 10px 16px;
   font: 700 12px Inter, system-ui, sans-serif;
   cursor: pointer;
-  transition: right 200ms ease;
 }
 
 /*
- * When the county detail pane or the methodology popup is open on
- * desktop, app-refinements.js measures it and the launcher steps left of
- * it (mirroring the in-frame tour chips) instead of covering its values.
- * On phones the sheet is full-width, so the launcher hides instead.
+ * While the county detail pane or the methodology popup is open, the
+ * launcher hides on both devices instead of covering the pane's values
+ * (2026-07-20 feedback replaced the earlier desktop left-shift, which
+ * stranded chips mid-map). app-refinements.js toggles the root class.
  */
-html.chip-pane-open:not([data-device="mobile"]) .chip-assistant-launcher {
-  right: var(--chip-pane-clear, 492px);
-}
-
-html[data-device="mobile"].chip-pane-open .chip-assistant-launcher {
+html.chip-pane-open .chip-assistant-launcher {
   display: none;
 }
 

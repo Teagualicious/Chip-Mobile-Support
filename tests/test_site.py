@@ -123,7 +123,7 @@ def test_wrapper_pages_reference_untouched_sources() -> None:
     assert 'src="./CHIPv.4.2.html"' in read("app.html")
     tutorial = read("tutorial.html")
     assert 'src="./CHIPv.4.2-tutorial.html"' in tutorial
-    assert 'src="./assets/js/tutorial-state.js"' in tutorial
+    assert 'src="./assets/js/tutorial-state.js' in tutorial
 
 
 def test_html_uses_project_relative_internal_urls() -> None:
@@ -225,8 +225,8 @@ def test_assistant_chat_is_wired_without_committed_credentials() -> None:
     # tour's bonus step can spotlight a real launcher there.
     for page in ("app.html", "tutorial.html"):
         html = read(page)
-        assert 'href="./assets/css/assistant.css"' in html, page
-        assert 'src="./assets/js/chip-assistant.js"' in html, page
+        assert 'href="./assets/css/assistant.css' in html, page
+        assert 'src="./assets/js/chip-assistant.js' in html, page
 
     script = read("assets/js/chip-assistant.js")
     # Direct browser calls to the Claude API require this opt-in header, and
@@ -275,15 +275,23 @@ def test_app_refinements_cover_the_final_touch_up_round() -> None:
     # module so the frozen originals and the mobile-ui.js observer-count
     # contract stay untouched.
     for page in ("app.html", "tutorial.html"):
-        assert 'src="./assets/js/app-refinements.js"' in read(page), page
+        assert 'src="./assets/js/app-refinements.js' in read(page), page
 
     script = read("assets/js/app-refinements.js")
     # Population-index metrics leave the dropdown and demographics table.
     assert '"pct_black", "hispanic_index"' in script
     # County labels scale with zoom on both devices; the mobile-ui.js
-    # zoom-out tuner keeps ownership below the 7.2 baseline.
+    # zoom-out tuner keeps ownership below the 7.2 baseline on phones,
+    # and desktop keeps labels visible (shrunken) when zooming out.
     assert "scaleLabelsWithZoom" in script
     assert "mobile && z < BASE_ZOOM" in script
+    assert "z >= 5.2" in script
+    # Prospecting pane: County spend leads, tailwind below, both fixed open.
+    assert "reorderProspectPane" in script
+    assert '"county spend"' in script and '"county tailwind"' in script
+    # Pane-state sync must survive a lost observer or an iframe reload.
+    assert "wrappedDeselect" in script
+    assert "parentObserver.disconnect()" in script
     # Clicking a county gently zooms and centers it.
     assert "map.easeTo({" in script
     # AE client book ranks by priority via a wrap of the frozen renderer,
@@ -321,12 +329,30 @@ def test_detail_panes_collapse_and_floating_chips_clear_open_panes() -> None:
     assert 'html[data-device="mobile"] .chip-acc > .chip-acc__head' in css
     # Merged County data sub-heads keep the frozen heading look.
     assert ".chip-subhead" in css
-    # Desktop chips shift left of an open pane; phones hide them instead.
-    assert "--chip-pane-clear" in css
-    assert 'html[data-device="mobile"].chip-pane-open' in css
+    # 2026-07-20: the chips hide while any pane is open, on both devices
+    # (the earlier desktop left-shift stranded them mid-map), and touch
+    # devices never show the stranded hover tooltip.
+    assert "html.chip-pane-open .chip-tour-launch" in css
+    assert 'html[data-device="mobile"] #tip' in css
     acss = read("assets/css/assistant.css")
-    assert "chip-pane-open" in acss
-    assert "var(--chip-pane-clear" in acss
+    assert "html.chip-pane-open .chip-assistant-launcher" in acss
+    assert "var(--chip-pane-clear" in acss  # chat panel still docks beside
+
+
+def test_asset_references_are_cache_busted() -> None:
+    # 2026-07-20 field debugging: a stale-CSS/fresh-JS split from browser
+    # caches produced mixed chip states on deployed devices. Every local
+    # asset reference carries a version query, and mobile-ui.js forwards
+    # it to the stylesheet it injects into the iframe.
+    pattern = re.compile(r'(?:href|src)="\./assets/[^"?]+(?:\?v=([0-9a-z-]+))?"')
+    versions = set()
+    for page in ("index.html", "app.html", "tutorial.html"):
+        for match in pattern.finditer(read(page)):
+            assert match.group(1), f"unversioned asset in {page}: {match.group(0)}"
+            versions.add(match.group(1))
+    assert len(versions) == 1, f"asset versions out of step: {versions}"
+    script = read("assets/js/mobile-ui.js")
+    assert 'searchParams.get("v")' in script
 
 
 def test_no_api_keys_committed_to_the_delivery_layer() -> None:
