@@ -363,9 +363,12 @@ def test_app_bar_tabs_replace_the_desktop_floating_pills() -> None:
     assert 'html[data-device="mobile"] .appnav' in css
     acss = read("assets/css/assistant.css")
     assert 'html:not([data-device="mobile"]) .chip-assistant-launcher' in acss
-    # The tour's bonus steps follow the relocated targets.
+    # The tour's bonus steps follow the relocated targets, and stale copy
+    # pointing at retired locations is patched at render time.
     mobile_ui = read("assets/js/mobile-ui.js")
     assert "chip-nav-ask" in mobile_ui and "chip-nav-tour" in mobile_ui
+    assert "replay it from the Tutorial button" in mobile_ui  # step-1 patch
+    assert "fixRelocatedReferences" in script  # posture-note patch
 
 
 def test_asset_references_are_cache_busted() -> None:
