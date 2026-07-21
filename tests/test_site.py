@@ -344,6 +344,30 @@ def test_detail_panes_collapse_and_floating_chips_clear_open_panes() -> None:
     assert "drawerOpen" in script
 
 
+def test_app_bar_tabs_replace_the_desktop_floating_pills() -> None:
+    # 2026-07-21 feedback: Take the tour and Ask CHIP become app-bar tabs
+    # (Methodology moves to the end), joined by two demo-connection tabs;
+    # desktop floating pills retire, phones keep their own affordances
+    # and reach the demo connections from the Controls drawer.
+    script = read("assets/js/app-refinements.js")
+    assert "enhanceAppNav" in script
+    assert "chip-nav-tour" in script and "chip-nav-ask" in script
+    assert "Open Architect" in script and "Open Salesforce" in script
+    assert "chipConnectPop" in script
+    assert "This is a demo of how CHIP could connect" in script
+    assert "chip-drawer-connect-link" in script
+    css = read("assets/css/mobile.css")
+    assert ".chip-connect" in css
+    assert ".chip-drawer-connect-link" in css
+    assert 'html:not([data-device="mobile"]) .tour-launch' in css
+    assert 'html[data-device="mobile"] .appnav' in css
+    acss = read("assets/css/assistant.css")
+    assert 'html:not([data-device="mobile"]) .chip-assistant-launcher' in acss
+    # The tour's bonus steps follow the relocated targets.
+    mobile_ui = read("assets/js/mobile-ui.js")
+    assert "chip-nav-ask" in mobile_ui and "chip-nav-tour" in mobile_ui
+
+
 def test_asset_references_are_cache_busted() -> None:
     # 2026-07-20 field debugging: a stale-CSS/fresh-JS split from browser
     # caches produced mixed chip states on deployed devices. Every local

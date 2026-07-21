@@ -14,6 +14,7 @@
 .chip-drawer-tour,
 .chip-drawer-note,
 .chip-drawer-method-link,
+.chip-drawer-connect-link,
 .chip-map-legend,
 .chip-filter-badge,
 .chip-sheet-grab,
@@ -99,6 +100,90 @@
 .tour-launch {
   right: 18px;
   bottom: 190px;
+}
+
+/*
+ * 2026-07-21: the floating action pills kept colliding with panes on
+ * desktop, so their jobs moved into app-bar tabs (app-refinements.js).
+ * The injected dashboard pill retires everywhere; the tutorial page's
+ * frozen chip stays mobile-only, where it is the replay affordance.
+ */
+.chip-tour-launch {
+  display: none !important;
+}
+
+html:not([data-device="mobile"]) .tour-launch {
+  display: none !important;
+}
+
+/* Six tabs need a little compression on narrower desktop windows. */
+@media (max-width: 1280px) {
+  .appnav__item {
+    padding: 8px 8px;
+    font-size: 12px;
+  }
+}
+
+/*
+ * "Open Architect" / "Open Salesforce" demo-connection dialog: a small
+ * centered modal explaining what the buttons would do in production.
+ */
+.chip-connect {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(20px, env(safe-area-inset-top, 0px)) 20px
+    max(20px, env(safe-area-inset-bottom, 0px));
+  background: rgba(2, 12, 20, 0.55);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.chip-connect[hidden] {
+  display: none;
+}
+
+.chip-connect__card {
+  width: min(430px, 100%);
+  padding: 20px 22px;
+  border: 1px solid rgba(148, 210, 255, 0.35);
+  border-radius: 16px;
+  background: #04202f;
+  color: #e6f0f7;
+  box-shadow: 0 24px 60px rgba(0, 8, 16, 0.6);
+  font: 400 13.5px/1.6 Inter, system-ui, sans-serif;
+}
+
+.chip-connect__kicker {
+  margin-bottom: 6px;
+  color: #9fc2d4;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chip-connect__card h3 {
+  margin: 0 0 8px;
+  color: #fff;
+  font-size: 19px;
+}
+
+.chip-connect__card p {
+  margin: 0 0 16px;
+  color: #c9dbe7;
+}
+
+.chip-connect__close {
+  width: 100%;
+}
+
+.chip-connect__close:focus-visible {
+  outline: 3px solid rgba(39, 183, 223, 0.9);
+  outline-offset: 2px;
 }
 
 /*
@@ -428,7 +513,8 @@ html.chip-pane-open .tour-launch {
   html[data-device="mobile"] .ctrl__scroll > .chip-drawer-about-toggle { order: 5; }
   html[data-device="mobile"] .ctrl__scroll > .hdr { order: 6; }
   html[data-device="mobile"] .ctrl__scroll > details.grp,
-  html[data-device="mobile"] .ctrl__scroll > .chip-drawer-method-link { order: 7; }
+  html[data-device="mobile"] .ctrl__scroll > .chip-drawer-method-link,
+  html[data-device="mobile"] .ctrl__scroll > .chip-drawer-connect-link { order: 7; }
   html[data-device="mobile"] .ctrl__scroll > .chip-drawer-note { order: 8; }
 
   html[data-device="mobile"] .ctrl__scroll > .hdr + .divider {
@@ -505,11 +591,21 @@ html.chip-pane-open .tour-launch {
   }
 
   /*
+   * Mobile mode always uses its own affordances (drawer rows, top-right
+   * Ask CHIP): the frozen CSS only hides the app nav at <=820px, but
+   * coarse-pointer tablets classify as mobile up to 1100px.
+   */
+  html[data-device="mobile"] .appnav {
+    display: none !important;
+  }
+
+  /*
    * The app nav (and its Methodology button) is hidden on phones, so the
    * drawer opens the methodology popup from the reference dropdowns' old
    * slot in the panel.
    */
-  html[data-device="mobile"] .chip-drawer-method-link {
+  html[data-device="mobile"] .chip-drawer-method-link,
+  html[data-device="mobile"] .chip-drawer-connect-link {
     display: flex;
     align-items: center;
     justify-content: space-between;

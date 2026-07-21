@@ -486,6 +486,161 @@
     win.renderDetail = wrapped;
   }
 
+  /* ---------- app-bar tabs & demo connections (2026-07-21) ---------- */
+
+  function ensureConnectPop(doc, win) {
+    let pop = doc.getElementById("chipConnectPop");
+    if (pop) {
+      return pop;
+    }
+    pop = doc.createElement("div");
+    pop.id = "chipConnectPop";
+    pop.className = "chip-connect";
+    pop.hidden = true;
+    pop.setAttribute("role", "dialog");
+    pop.setAttribute("aria-modal", "true");
+    pop.setAttribute("aria-labelledby", "chipConnectTitle");
+    pop.innerHTML =
+      '<div class="chip-connect__card">' +
+      '<div class="chip-connect__kicker">Demo connection</div>' +
+      '<h3 id="chipConnectTitle"></h3>' +
+      '<p id="chipConnectCopy"></p>' +
+      '<button type="button" class="btn chip-connect__close" id="chipConnectClose">Close</button>' +
+      "</div>";
+    doc.body.appendChild(pop);
+
+    const close = function () {
+      pop.hidden = true;
+      try {
+        updatePaneState(win, doc);
+      } catch (error) {}
+    };
+    doc.getElementById("chipConnectClose").addEventListener("click", close);
+    pop.addEventListener("click", function (event) {
+      if (event.target === pop) {
+        close();
+      }
+    });
+    doc.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && !pop.hidden) {
+        close();
+      }
+    });
+    return pop;
+  }
+
+  function openConnectPop(doc, win, product) {
+    const pop = ensureConnectPop(doc, win);
+    doc.getElementById("chipConnectTitle").textContent = "Open " + product;
+    doc.getElementById("chipConnectCopy").textContent =
+      "This is a demo of how CHIP could connect — in a production build " +
+      "this button opens straight to your " + product + " dashboard, " +
+      "carrying over the county and accounts you are looking at.";
+    pop.hidden = false;
+    try {
+      updatePaneState(win, doc);
+    } catch (error) {}
+    try {
+      doc.getElementById("chipConnectClose").focus({ preventScroll: true });
+    } catch (error) {}
+  }
+
+  function enhanceAppNav(doc, win) {
+    // 2026-07-21 feedback: the floating Take the tour / Ask CHIP pills
+    // kept colliding with panes on desktop, so they become app-bar tabs
+    // (Methodology moves to the end), plus two demo-connection tabs.
+    // Phones keep their own affordances — the app nav is hidden there.
+    const nav = doc.querySelector(".appnav");
+    if (!nav || nav.dataset.chipNavEnhanced === "true") {
+      return;
+    }
+    nav.dataset.chipNavEnhanced = "true";
+
+    const methodology = Array.from(nav.querySelectorAll(".appnav__item")).find(
+      function (button) {
+        return button.textContent.trim() === "Methodology";
+      },
+    );
+
+    const addItem = function (label, className, onClick) {
+      const button = doc.createElement("button");
+      button.type = "button";
+      button.className = "appnav__item " + className;
+      button.textContent = label;
+      button.addEventListener("click", onClick);
+      nav.appendChild(button);
+      return button;
+    };
+
+    const tutorialPage = document.body.dataset.page === "tutorial";
+    addItem("Take the tour", "chip-nav-tour", function () {
+      if (tutorialPage) {
+        const launch = doc.getElementById("tourLaunch");
+        if (launch) {
+          launch.click();
+        }
+        return;
+      }
+      try {
+        window.top.location.href = "./tutorial.html";
+      } catch (error) {
+        window.location.href = "./tutorial.html";
+      }
+    });
+
+    addItem("Ask CHIP", "chip-nav-ask", function () {
+      // The tab toggles: the hidden launcher only opens the panel, so a
+      // second press routes through the panel's own close control.
+      const panel = document.querySelector(".chip-assistant-panel");
+      if (panel && !panel.hidden) {
+        const close = panel.querySelector('[data-act="close"]');
+        if (close) {
+          close.click();
+        }
+        return;
+      }
+      const launcher = document.querySelector(".chip-assistant-launcher");
+      if (launcher) {
+        launcher.click();
+      }
+    });
+
+    addItem("Open Architect", "chip-nav-connect", function () {
+      openConnectPop(doc, win, "Architect");
+    });
+    addItem("Open Salesforce", "chip-nav-connect", function () {
+      openConnectPop(doc, win, "Salesforce");
+    });
+
+    if (methodology) {
+      nav.appendChild(methodology);
+    }
+  }
+
+  function addDrawerConnectLinks(doc, win) {
+    // Phones reach the demo connections from the Controls drawer, in the
+    // same group as the methodology link.
+    const ctrlScroll = doc.querySelector(".ctrl__scroll");
+    if (!ctrlScroll || doc.querySelector(".chip-drawer-connect-link")) {
+      return;
+    }
+    ["Architect", "Salesforce"].forEach(function (product) {
+      const link = doc.createElement("button");
+      link.type = "button";
+      link.className = "chip-drawer-connect-link";
+      link.setAttribute("aria-haspopup", "dialog");
+      link.textContent = "Open " + product;
+      link.addEventListener("click", function () {
+        const ctrl = doc.getElementById("ctrl");
+        if (ctrl) {
+          ctrl.classList.remove("open");
+        }
+        openConnectPop(doc, win, product);
+      });
+      ctrlScroll.appendChild(link);
+    });
+  }
+
   /* ---------- 3: methodology popup ---------- */
 
   function buildMethodologyPopup(doc, win) {
@@ -588,6 +743,8 @@
     // — the launcher floated over the drawer's replay-tour row otherwise.
     const ctrl = doc.getElementById("ctrl");
     const drawerOpen = Boolean(ctrl && ctrl.classList.contains("open"));
+    const connect = doc.getElementById("chipConnectPop");
+    const connectOpen = Boolean(connect && !connect.hidden);
 
     // While the tour runs, the chips are highlight targets; moving or
     // hiding them mid-step would strand the focus ring.
@@ -601,7 +758,7 @@
     // observes the parent root's class attribute, so an unconditional
     // remove()/add() would re-trigger it forever.
     const roots = [document.documentElement, doc.documentElement];
-    if ((!openPane && !drawerOpen) || tourActive) {
+    if ((!openPane && !drawerOpen && !connectOpen) || tourActive) {
       roots.forEach(function (root) {
         if (root.classList.contains("chip-pane-open")) {
           root.classList.remove("chip-pane-open");
@@ -717,6 +874,8 @@
       function () { installClientRanking(win); },
       function () { installDetailPipeline(win, childDocument); },
       function () { buildMethodologyPopup(childDocument, win); },
+      function () { enhanceAppNav(childDocument, win); },
+      function () { addDrawerConnectLinks(childDocument, win); },
       function () { watchPanes(win, childDocument); },
     ].forEach(function (step) {
       try {
