@@ -1284,6 +1284,16 @@
       if (stepNumber === ORIGINAL_STEPS && tourNext.textContent === "Finish") {
         tourNext.textContent = "Next";
       }
+      // The frozen step-1 copy points at the retired "Tutorial button";
+      // the replay affordance is the "Take the tour" tab now (Controls
+      // drawer on phones). Patched on every render, like the kicker.
+      const mainCopy = doc.getElementById("tourCopy");
+      if (mainCopy && mainCopy.textContent.indexOf("replay it from the Tutorial button") >= 0) {
+        mainCopy.textContent = mainCopy.textContent.replace(
+          "replay it from the Tutorial button",
+          "replay it from the “Take the tour” tab up top — on phones, “Replay the guided tour” in the Controls drawer",
+        );
+      }
     }
 
     function returnToMainTour() {

@@ -447,6 +447,25 @@
     });
   }
 
+  function fixRelocatedReferences(scroll) {
+    // The frozen posture note sends readers to "Get / Keep / Grow — how
+    // & why in the left panel", but those dropdowns moved into the
+    // Methodology popup. Text-node-only surgery keeps the markup frozen.
+    scroll.querySelectorAll(".note").forEach(function (note) {
+      if (note.textContent.indexOf("Get / Keep / Grow") < 0) {
+        return;
+      }
+      note.childNodes.forEach(function (node) {
+        if (node.nodeType === 3 && node.nodeValue.indexOf("in the left panel") >= 0) {
+          node.nodeValue = node.nodeValue.replace(
+            "in the left panel",
+            "under Methodology in the top bar (Controls drawer on phones)",
+          );
+        }
+      });
+    });
+  }
+
   function refineDetailPane(doc) {
     const scroll = doc.getElementById("detailScroll");
     if (!scroll || scroll.dataset.chipRefined === "true") {
@@ -457,6 +476,7 @@
     mergeCountyData(doc, scroll);
     reorderProspectPane(doc, scroll);
     addClientSortControls(doc, scroll);
+    fixRelocatedReferences(scroll);
     collapseSections(doc, scroll);
   }
 
