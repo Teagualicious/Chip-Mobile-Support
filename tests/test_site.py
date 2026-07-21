@@ -337,6 +337,11 @@ def test_detail_panes_collapse_and_floating_chips_clear_open_panes() -> None:
     acss = read("assets/css/assistant.css")
     assert "html.chip-pane-open .chip-assistant-launcher" in acss
     assert "var(--chip-pane-clear" in acss  # chat panel still docks beside
+    # Phones put the launcher top-right (mirroring the Controls chip) and
+    # count the near-fullscreen drawer as an open pane.
+    assert "top: calc(env(safe-area-inset-top, 0px) + 72px)" in acss
+    script = read("assets/js/app-refinements.js")
+    assert "drawerOpen" in script
 
 
 def test_asset_references_are_cache_busted() -> None:

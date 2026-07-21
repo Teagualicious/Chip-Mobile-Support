@@ -583,6 +583,11 @@
       (pop && pop.classList.contains("open") && pop) ||
       (detail && detail.classList.contains("open") && detail) ||
       null;
+    // The phone drawer covers nearly the whole screen (its "open" class
+    // only ever exists in mobile mode), so it counts as an open pane too
+    // — the launcher floated over the drawer's replay-tour row otherwise.
+    const ctrl = doc.getElementById("ctrl");
+    const drawerOpen = Boolean(ctrl && ctrl.classList.contains("open"));
 
     // While the tour runs, the chips are highlight targets; moving or
     // hiding them mid-step would strand the focus ring.
@@ -596,7 +601,7 @@
     // observes the parent root's class attribute, so an unconditional
     // remove()/add() would re-trigger it forever.
     const roots = [document.documentElement, doc.documentElement];
-    if (!openPane || tourActive) {
+    if ((!openPane && !drawerOpen) || tourActive) {
       roots.forEach(function (root) {
         if (root.classList.contains("chip-pane-open")) {
           root.classList.remove("chip-pane-open");
@@ -606,14 +611,19 @@
       return;
     }
 
-    const rect = openPane.getBoundingClientRect();
-    const clear = Math.max(0, Math.round(win.innerWidth - rect.left)) + 16;
     roots.forEach(function (root) {
       if (!root.classList.contains("chip-pane-open")) {
         root.classList.add("chip-pane-open");
       }
-      root.style.setProperty("--chip-pane-clear", clear + "px");
     });
+    if (openPane) {
+      // Only real panes feed the chat panel's beside-detail offset.
+      const rect = openPane.getBoundingClientRect();
+      const clear = Math.max(0, Math.round(win.innerWidth - rect.left)) + 16;
+      roots.forEach(function (root) {
+        root.style.setProperty("--chip-pane-clear", clear + "px");
+      });
+    }
   }
 
   // A reloaded iframe replaces win/doc but the parent-side observer from
@@ -661,6 +671,10 @@
     const pop = doc.getElementById("chipMethodPop");
     if (pop) {
       observer.observe(pop, { attributes: true, attributeFilter: ["class"] });
+    }
+    const ctrl = doc.getElementById("ctrl");
+    if (ctrl) {
+      observer.observe(ctrl, { attributes: true, attributeFilter: ["class"] });
     }
     // Tour start/end must also re-sync the chips: while it runs they are
     // highlight targets and stay put, afterwards any still-open pane

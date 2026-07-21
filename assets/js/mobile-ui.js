@@ -1338,7 +1338,15 @@
       }
       card.style.left = cardLeft + "px";
       card.style.top = cardTop + "px";
-      doc.body.classList.toggle("chip-tour-detail-step", detectDeviceMode() === "mobile");
+      // Mobile pins the card opposite the highlight: top-of-screen card
+      // for the bottom-corner targets, default bottom sheet when the
+      // target sits in the upper half (the Ask CHIP launcher moved to
+      // the top-right on phones, 2026-07-20).
+      const targetLow = rect.top > win.innerHeight / 2;
+      doc.body.classList.toggle(
+        "chip-tour-detail-step",
+        detectDeviceMode() === "mobile" && targetLow,
+      );
     }
 
     function startBonus() {
