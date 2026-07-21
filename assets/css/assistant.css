@@ -38,6 +38,15 @@ html.chip-pane-open .chip-assistant-launcher {
   display: none;
 }
 
+/*
+ * 2026-07-21: on desktop the assistant opens from the app bar's
+ * "Ask CHIP" tab (app-refinements.js clicks this hidden launcher, which
+ * keeps owning the panel state). Phones keep the top-right pill.
+ */
+html:not([data-device="mobile"]) .chip-assistant-launcher {
+  display: none;
+}
+
 .chip-assistant-launcher:hover {
   background: #1a3350;
 }

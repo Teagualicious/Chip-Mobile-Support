@@ -1217,16 +1217,32 @@
         title: "Ask CHIP anything",
         copy: "This chat answers questions like “How is Summit County doing?” or “Top prospects in Erie” — and moves the map while it answers. It works out of the box in demo mode; add an API key in its settings for free-form questions.",
         rect: function rectAssistant() {
-          // The launcher lives in the parent document; the iframe fills the
-          // viewport, so parent and child coordinates line up 1:1.
+          // Desktop highlights the app-bar tab (2026-07-21); phones keep
+          // the floating launcher, which lives in the parent document —
+          // the iframe fills the viewport, so coordinates line up 1:1.
+          const navTab = doc.querySelector(".chip-nav-ask");
+          if (navTab) {
+            const navRect = navTab.getBoundingClientRect();
+            if (navRect.width) {
+              return navRect;
+            }
+          }
           const launcher = document.querySelector(".chip-assistant-launcher");
           return launcher ? launcher.getBoundingClientRect() : null;
         },
       },
       {
         title: "Replay this tour anytime",
-        copy: "The Tutorial button restarts this walkthrough whenever you need a refresher. The dashboard has its own doorway too — “Take the tour”, plus “Replay the guided tour” inside the mobile controls drawer.",
+        copy: "The “Take the tour” tab restarts this walkthrough whenever you need a refresher. The dashboard has the same tab, and on phones the doorway lives inside the Controls drawer as “Replay the guided tour”.",
         rect: function rectReplay() {
+          // Desktop: the app-bar tab. Phones: the frozen Tutorial chip.
+          const navTab = doc.querySelector(".chip-nav-tour");
+          if (navTab) {
+            const navRect = navTab.getBoundingClientRect();
+            if (navRect.width) {
+              return navRect;
+            }
+          }
           const button = doc.getElementById("tourLaunch");
           return button ? button.getBoundingClientRect() : null;
         },
