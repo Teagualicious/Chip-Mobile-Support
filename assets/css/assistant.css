@@ -364,9 +364,16 @@ html.chip-tour-open .chip-assistant-panel {
 
 /* ---------- phone layout ---------- */
 @media (max-width: 820px) {
+  /*
+   * 2026-07-20 feedback: at the bottom the launcher crowded the zoom
+   * ladder and floated over open sheets and the drawer. On phones it
+   * mirrors the Controls chip instead — top-right, under the app bar —
+   * and hides entirely while the drawer or any sheet is open.
+   */
   html[data-device="mobile"] .chip-assistant-launcher {
+    top: calc(env(safe-area-inset-top, 0px) + 72px);
     right: 12px;
-    bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+    bottom: auto;
     min-height: 44px;
     font-size: 13px;
   }
