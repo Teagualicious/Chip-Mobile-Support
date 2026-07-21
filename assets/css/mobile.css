@@ -107,19 +107,14 @@
  */
 
 /*
- * The floating chips step left of whichever pane is open on desktop —
- * the county detail or the methodology popup — instead of floating on
- * top of its values. app-refinements.js measures the pane and sets
- * --chip-pane-clear on both document roots.
+ * The floating chips hide while any pane is open — the county detail or
+ * the methodology popup — on both devices (2026-07-20 feedback: the
+ * earlier desktop left-shift stranded them mid-map). app-refinements.js
+ * toggles chip-pane-open on both document roots.
  */
-.chip-tour-launch,
-.tour-launch {
-  transition: right 200ms ease;
-}
-
-html.chip-pane-open:not([data-device="mobile"]) .chip-tour-launch,
-html.chip-pane-open:not([data-device="mobile"]) .tour-launch {
-  right: var(--chip-pane-clear, 492px);
+html.chip-pane-open .chip-tour-launch,
+html.chip-pane-open .tour-launch {
+  display: none !important;
 }
 
 /*
@@ -547,11 +542,12 @@ html.chip-pane-open:not([data-device="mobile"]) .tour-launch {
   }
 
   /*
-   * On phones the open sheet spans the full width, so instead of
-   * shifting, the floating chips get out of the way entirely.
+   * Hover tooltips have no pointer to follow on touch screens — the tap
+   * that would show one selects the county instead, and iOS left the
+   * last tooltip stranded on the map.
    */
-  html[data-device="mobile"].chip-pane-open .tour-launch,
-  html[data-device="mobile"].chip-pane-open .chip-tour-launch {
+  html[data-device="mobile"] #tip,
+  html[data-device="mobile"] .tip {
     display: none !important;
   }
 
@@ -969,8 +965,6 @@ html.chip-pane-open:not([data-device="mobile"]) .tour-launch {
   html[data-device="mobile"] .ctrl,
   html[data-device="mobile"] .chip-mobile-backdrop,
   html[data-device="mobile"] .detail,
-  .chip-tour-launch,
-  .tour-launch,
   .chip-acc__chev {
     transition: none !important;
   }

@@ -93,15 +93,28 @@
       '        var mobile = document.documentElement.dataset.device === "mobile";',
       "        var z = map.getZoom();",
       "        if (mobile && z < BASE_ZOOM) { return; }",
-      "        var size = mobile",
-      "          ? Math.min(16, 11 + (z - BASE_ZOOM) * 1.8)",
-      "          : Math.max(10.5, Math.min(19, 12 + (z - BASE_ZOOM) * 2.4));",
+      "        /* Zoomed-in growth on both devices; zoomed-out desktop keeps",
+      "           labels visible at a shrunken size down to zoom 5.2 (the",
+      "           frozen positionLabels hides them entirely below 7.2 —",
+      "           2026-07-20 feedback). The frozen opacity write runs first",
+      "           in the chain, so the override here always lands last. */",
+      "        var size;",
+      "        if (z >= BASE_ZOOM) {",
+      "          size = mobile",
+      "            ? Math.min(16, 11 + (z - BASE_ZOOM) * 1.8)",
+      "            : Math.max(10.5, Math.min(19, 12 + (z - BASE_ZOOM) * 2.4));",
+      "        } else {",
+      "          size = Math.max(9.5, 12 - (BASE_ZOOM - z) * 1.6);",
+      "        }",
       '        var labels = document.querySelectorAll("#labels .clab");',
       "        for (var i = 0; i < labels.length; i++) {",
       "          if (mobile) {",
       '            labels[i].style.setProperty("font-size", size.toFixed(1) + "px", "important");',
       "          } else {",
       '            labels[i].style.fontSize = size.toFixed(1) + "px";',
+      "            if (z < BASE_ZOOM) {",
+      "              labels[i].style.opacity = z >= 5.2 ? 1 : 0;",
+      "            }",
       "          }",
       "        }",
       "      }",
@@ -214,7 +227,12 @@
   // 2026-07-20 cleanup: the money sections stay front and center as plain
   // always-visible sections; the working client book starts open; context
   // (market read, county data, prospect rollups) starts collapsed.
-  const NEVER_COLLAPSE_PREFIXES = ["sales snapshot", "sales plan"];
+  const NEVER_COLLAPSE_PREFIXES = [
+    "sales snapshot",
+    "sales plan",
+    "county spend",
+    "county tailwind",
+  ];
   const DEFAULT_OPEN_PREFIXES = ["client book", "priority get targets"];
 
   function sectionKey(title) {
@@ -318,6 +336,29 @@
     }
   }
 
+  function reorderProspectPane(doc, scroll) {
+    // 2026-07-20 feedback: on the prospecting pane, County spend leads
+    // and County tailwind sits directly below it (both always visible via
+    // NEVER_COLLAPSE_PREFIXES); the frozen order is tailwind-first.
+    let tailwind = null;
+    let spend = null;
+    scroll.querySelectorAll(".block").forEach(function (block) {
+      const title = block.querySelector(":scope > .block__t");
+      if (!title) {
+        return;
+      }
+      const key = sectionKey(title);
+      if (key.indexOf("county tailwind") === 0) {
+        tailwind = block;
+      } else if (key.indexOf("county spend") === 0) {
+        spend = block;
+      }
+    });
+    if (tailwind && spend && tailwind.parentNode === spend.parentNode) {
+      tailwind.parentNode.insertBefore(spend, tailwind);
+    }
+  }
+
   function addClientSortControls(doc, scroll) {
     const tbody = scroll.querySelector("#clientTableBody");
     if (!tbody) {
@@ -414,6 +455,7 @@
     scroll.dataset.chipRefined = "true";
     moveSwitchButtonsToTop(doc, scroll);
     mergeCountyData(doc, scroll);
+    reorderProspectPane(doc, scroll);
     addClientSortControls(doc, scroll);
     collapseSections(doc, scroll);
   }
@@ -574,6 +616,12 @@
     });
   }
 
+  // A reloaded iframe replaces win/doc but the parent-side observer from
+  // the previous document would keep firing with stale state (and fight
+  // the fresh one over the parent root's class). One slot, swapped on
+  // every install, prevents that.
+  let parentObserver = null;
+
   function watchPanes(win, doc) {
     if (win.__chipPaneWatchInstalled) {
       return;
@@ -582,9 +630,29 @@
 
     const update = function () {
       try {
+        if (frame.contentDocument !== doc) {
+          observer.disconnect();
+          return;
+        }
         updatePaneState(win, doc);
       } catch (error) {}
     };
+
+    // The close button and empty-map clicks go through the frozen
+    // deselect(); syncing there as well means a hidden chip can never
+    // stay hidden if an observer is late or lost.
+    try {
+      const originalDeselect = win.deselect;
+      if (typeof originalDeselect === "function" && !originalDeselect.chipWrapped) {
+        const wrappedDeselect = function () {
+          originalDeselect();
+          update();
+        };
+        wrappedDeselect.chipWrapped = true;
+        win.deselect = wrappedDeselect;
+      }
+    } catch (error) {}
+
     const observer = new win.MutationObserver(update);
     const detail = doc.getElementById("detail");
     if (detail) {
@@ -602,7 +670,10 @@
     if (extra) {
       observer.observe(extra, { attributes: true, attributeFilter: ["hidden"] });
     }
-    const parentObserver = new MutationObserver(update);
+    if (parentObserver) {
+      parentObserver.disconnect();
+    }
+    parentObserver = new MutationObserver(update);
     parentObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["class"],
@@ -624,12 +695,20 @@
       return;
     }
 
+    // Each enhancement stands alone: one failing must never take the
+    // rest down with it (a dead pane watcher leaves chips stranded).
     const win = frame.contentWindow;
-    injectLexicalRefinements(childDocument);
-    installClientRanking(win);
-    installDetailPipeline(win, childDocument);
-    buildMethodologyPopup(childDocument, win);
-    watchPanes(win, childDocument);
+    [
+      function () { injectLexicalRefinements(childDocument); },
+      function () { installClientRanking(win); },
+      function () { installDetailPipeline(win, childDocument); },
+      function () { buildMethodologyPopup(childDocument, win); },
+      function () { watchPanes(win, childDocument); },
+    ].forEach(function (step) {
+      try {
+        step();
+      } catch (error) {}
+    });
   }
 
   frame.addEventListener("load", enhanceFrame);

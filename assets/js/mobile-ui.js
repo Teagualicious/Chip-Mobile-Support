@@ -10,7 +10,13 @@
   const scriptUrl = document.currentScript && document.currentScript.src
     ? document.currentScript.src
     : new URL("./assets/js/mobile-ui.js", window.location.href).href;
-  const mobileStylesheetUrl = new URL("../css/mobile.css", scriptUrl).href;
+  // Relative URL resolution drops the base's query, so the cache-busting
+  // ?v= on this script's tag is re-applied to the injected stylesheet —
+  // stale-CSS/fresh-JS splits caused real field bugs (2026-07-20).
+  const assetVersion = new URL(scriptUrl).searchParams.get("v");
+  const mobileStylesheetUrl =
+    new URL("../css/mobile.css", scriptUrl).href +
+    (assetVersion ? "?v=" + encodeURIComponent(assetVersion) : "");
   const narrowViewport = window.matchMedia("(max-width: 820px)");
   const coarsePointer = window.matchMedia("(pointer: coarse)");
 
