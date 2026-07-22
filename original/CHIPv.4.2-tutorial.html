@@ -912,12 +912,7 @@ select.metric,.btn{background:#062c44;border-color:#2a5a73;color:#f5fbfd}.btn:ho
       </summary>
       <div class="grp__body">
         <div class="note">
-          <b>Why the map is built on counties.</b> The map answers a question about <i>market</i>,
-          not <i>delivery</i>. AEs sell CTV, streaming audio, digital display, social and search across
-          the entire DMA regardless of cable-wire coverage, and linear reaches non-wired ground through
-          the interconnect &mdash; so drawing the sellable world as a wire map would understate the
-          addressable market.
-          <br>The base geography is the <b>17 counties of the Cleveland&ndash;Akron (Canton)
+          <b>Why the map is built on counties.</b> The base geography is the <b>17 counties of the Cleveland&ndash;Akron (Canton)
           Nielsen DMA</b>: Ashland, Ashtabula, Carroll, Cuyahoga, Erie, Geauga, Holmes, Huron,
           Lake, Lorain, Medina, Portage, Richland, Stark, Summit, Tuscarawas, Wayne. Counties are
           non-overlapping, they cover the market completely, they are the unit every syndicated
@@ -939,15 +934,6 @@ select.metric,.btn{background:#062c44;border-color:#2a5a73;color:#f5fbfd}.btn:ho
 
           <b>Demographics &mdash; read this before quoting a number in the room.</b> All
           demographics are <b>ACS 2020&ndash;2024 5-year</b>, computed at county level.
-          <b style="color:#b45309">They will not tie to the Market Map 2026 deck.</b> The deck&rsquo;s
-          figures are TruAudience, published per zone only; re-cutting them to counties would mean
-          inventing a weighted average, which is exactly the fabrication this tool has refused
-          throughout. Census is the only source that reports natively at county geography, so it is
-          the only internally consistent choice once zones are gone. The visible difference is
-          median age: the deck reads ~56 per zone, Census reads ~41 DMA-wide, because the deck&rsquo;s
-          figure is on a different base (adult or head-of-household, not whole population). Income,
-          education and homeownership track much more closely. If someone has the deck open next to
-          this tool, that is the discrepancy they will find.
           <br>&bull; <b>Population growth</b> is Census PEP 2020&rarr;2024 &mdash; annual estimates,
           clean non-overlapping endpoints.
           <br>&bull; <b>Income growth</b> compares ACS 2017&ndash;21 to ACS 2020&ndash;24 medians.
@@ -1098,11 +1084,6 @@ return maplibregl$1;
                  County Business Patterns 2023 and 2019, restricted to the 11 sectors that
                  buy local advertising.
                  demo_hispanic_index is county Hispanic share indexed to the DMA = 100.
-   NOTE: these are NOT the Market Map 2026 deck's demographics. That deck is TruAudience,
-   published per zone only; re-cutting it to counties would mean inventing a weighted
-   average. Census is the only source that reports natively at this geography. Expect the
-   figures to read differently from the deck -- Census median age is whole-population
-   (~41 DMA-wide); the deck's ~56 per zone is a different base.
    Clients / prospects / budgets: SAMPLE DATA, keyed by county FIPS. The prospect universe
    CONTAINS the client book (clients appear with status "Client" and their SR revenue), so
    captured + whitespace = addressable and the two panel modes reconcile county by county. */
