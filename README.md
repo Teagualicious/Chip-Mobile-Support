@@ -1,3 +1,10 @@
+<h2><B></B>PROJECT URL</h2>
+
+URL:
+```text
+https://teagualicious.github.io/Chip-Mobile-Support/
+```
+
 # CHIP Mobile Support and GitHub Pages Demo
 
 This repository turns the existing CHIP Cleveland–Akron market visualizer into a static, presentation-ready GitHub Pages site while preserving the original dashboard and tutorial source files.
