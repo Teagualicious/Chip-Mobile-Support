@@ -11,8 +11,7 @@
  *      the control panel into a popup that opens where the detail pane
  *      sits, launched from the app bar's Methodology button (and a drawer
  *      link on phones, where that button is hidden).
- *   4. Clicking a county gently zooms and centers it, keeping it clear of
- *      whichever panel covers part of the map.
+ *   4. Clicking a county gently zooms and centers it in the map viewport.
  *   5. Rank the AE client book by priority (churn risk, then spend) and
  *      recolor the KEEP pill red for urgency.
  *   6. Collapse the long detail-pane sections into dropdowns, and shift
@@ -126,9 +125,8 @@
       "    }",
       "  } catch (error) {}",
       "",
-      "  /* Selecting a county gently zooms and centers it. The offset keeps",
-      "     the county visible beside the desktop detail pane / above the",
-      "     mobile sheet. MapLibre treats the animation as non-essential, so",
+      "  /* Selecting a county gently zooms and centers it in the map viewport.",
+      "     MapLibre treats the animation as non-essential, so",
       "     prefers-reduced-motion collapses it to an instant move. */",
       "  try {",
       '    if (typeof map !== "undefined" && typeof GEO !== "undefined" && typeof selectCounty === "function") {',
@@ -139,20 +137,9 @@
       "          var feature = GEO.counties.features.find(function (f) { return f.id === id; });",
       "          if (!feature || !feature.properties || !feature.properties.label_pt) { return; }",
       "          var z = map.getZoom();",
-      "          var offset = [0, 0];",
-      '          if (document.documentElement.dataset.device === "mobile") {',
-      "            offset = [0, -Math.round(window.innerHeight * 0.18)];",
-      "          } else {",
-      '            var detail = document.getElementById("detail");',
-      '            if (detail && detail.classList.contains("open")) {',
-      "              var rect = detail.getBoundingClientRect();",
-      "              offset = [-Math.round((window.innerWidth - rect.left) / 2), 0];",
-      "            }",
-      "          }",
       "          map.easeTo({",
       "            center: feature.properties.label_pt,",
       "            zoom: z < 8.4 ? Math.min(z + 0.55, 8.4) : z,",
-      "            offset: offset,",
       "            duration: 650",
       "          });",
       "        } catch (error) {}",
