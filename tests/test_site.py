@@ -502,3 +502,22 @@ def test_no_hard_coded_github_pages_owner_or_repo_path() -> None:
         )
     )
     assert not re.search(r"https://[^\s\"']+\.github\.io/", text)
+
+
+def test_county_zoom_centers_the_selected_county_in_the_map_viewport() -> None:
+    script = read("assets/js/app-refinements.js")
+    assert "center: feature.properties.label_pt" in script
+    assert "offset: offset" not in script
+    assert "map viewport" in script
+
+
+def test_methodology_omits_retired_market_delivery_and_deck_copy() -> None:
+    for path in (
+        "CHIPv.4.2.html",
+        "CHIPv.4.2-tutorial.html",
+        "original/CHIPv.4.2.html",
+        "original/CHIPv.4.2-tutorial.html",
+    ):
+        html = read(path)
+        assert "The map answers a question about" not in html
+        assert "Market Map 2026" not in html
