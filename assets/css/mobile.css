@@ -773,9 +773,17 @@ html.chip-pane-open .tour-launch {
 
   /* Ladder on phones: the info toggle and zoom stack up to ~150px, so
      Ask CHIP sits at 160px (assistant.css) and the replay chip above it. */
+  /*
+   * 2026-07-21: the replay chip locks to the top rail with Controls and
+   * Ask CHIP (it was stranded mid-map at the old bottom-ladder offset
+   * once Ask CHIP moved up). It stacks directly under Ask CHIP, whose
+   * pill starts at safe-top + 72px with a 44px minimum height.
+   */
   html[data-device="mobile"] .tour-launch {
+    top: calc(env(safe-area-inset-top, 0px) + 126px);
     right: 12px;
-    bottom: calc(214px + var(--chip-safe-bottom));
+    bottom: auto;
+    min-height: 44px;
   }
 
   html[data-device="mobile"] .chip-mobile-backdrop {
