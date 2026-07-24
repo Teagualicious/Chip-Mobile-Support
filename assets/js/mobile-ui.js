@@ -131,10 +131,15 @@
     // run as a script inside the child document rather than through
     // `contentWindow` property access.
     //
-    // 2026-07-20 field report: a single refit at frame load still left a
-    // real iPhone on the world view, so the fit re-asserts itself after the
-    // style loads and on a short backoff — but only while the camera is
-    // clearly at world scale and the user has not touched the map.
+    // 2026-07-20/21 field reports: the world view kept coming back on real
+    // phones — including AFTER the tour, long past the original one-shot
+    // retries. Two design flaws: (a) any touch on the map permanently
+    // disarmed the auto-fit, and the tour itself invites a map tap on
+    // step 5; (b) all retries were spent within 8 seconds of load. The
+    // fit is now a perpetual watchdog: a world-scale camera that is not
+    // explained by a user gesture in the last 10 seconds always heals.
+    // Nobody deliberately studies a 17-county dashboard from zoom < 4,
+    // and active pinching keeps resetting the grace window.
     const script = doc.createElement("script");
     script.id = "chip-mobile-map-fit";
     script.textContent = [
@@ -142,9 +147,9 @@
       "  try {",
       "    if (typeof map === \"undefined\" || typeof BOUNDS === \"undefined\") { return; }",
       "    if (!map || typeof map.fitBounds !== \"function\") { return; }",
-      "    var userMoved = false;",
+      "    var lastGestureAt = 0;",
       "    [\"dragstart\", \"wheel\", \"touchstart\", \"dblclick\"].forEach(function (type) {",
-      "      try { map.on(type, function () { userMoved = true; }); } catch (error) {}",
+      "      try { map.on(type, function () { lastGestureAt = Date.now(); }); } catch (error) {}",
       "    });",
       "    function chipFitMarket() {",
       "      try {",
@@ -155,23 +160,23 @@
       "      } catch (error) {}",
       "    }",
       "    function chipEnsureMarketView() {",
-      "      if (userMoved) { return; }",
       "      if (document.documentElement.dataset.device !== \"mobile\") { return; }",
       "      var z = NaN;",
       "      try { z = map.getZoom(); } catch (error) {}",
-      "      if (!(z >= 4)) { chipFitMarket(); }",
+      "      if (z >= 4) { return; }",
+      "      if (Date.now() - lastGestureAt < 10000) { return; }",
+      "      chipFitMarket();",
       "    }",
       "    chipFitMarket();",
       "    /* The first fit can run before the mobile stylesheet lays the",
       "       map container out full-width (fitBounds throws, world view",
       "       stays). The container correction always fires a map resize,",
-      "       so re-checking there heals that race immediately. */",
+      "       so re-checking there heals that race immediately; the",
+      "       interval below catches everything else, whenever it happens. */",
       "    try { map.on(\"resize\", chipEnsureMarketView); } catch (error) {}",
       "    try { map.once(\"load\", chipEnsureMarketView); } catch (error) {}",
       "    try { map.once(\"idle\", chipEnsureMarketView); } catch (error) {}",
-      "    [800, 2000, 4500, 8000].forEach(function (delay) {",
-      "      setTimeout(chipEnsureMarketView, delay);",
-      "    });",
+      "    setInterval(chipEnsureMarketView, 2000);",
       "  } catch (error) {}",
       "})();",
     ].join("\n");

@@ -430,8 +430,15 @@ def test_mobile_map_fit_reasserts_until_the_market_view_sticks() -> None:
     script = read("assets/js/mobile-ui.js")
     assert "chipEnsureMarketView" in script
     assert "chipFitMarket" in script
-    assert "userMoved" in script
+    # 2026-07-21: a permanent touch-disarm plus retries that expired after
+    # 8s let the world view come back post-tour. The fit is a perpetual
+    # watchdog now, deferring only to gestures in the last 10 seconds.
+    assert "lastGestureAt" in script
+    assert "setInterval(chipEnsureMarketView, 2000)" in script
     assert "z >= 4" in script
+    # Selecting a county from a broken camera goes straight to county zoom.
+    refinements = read("assets/js/app-refinements.js")
+    assert "if (z < 4) { target = 7.8; }" in refinements
 
 
 def test_mobile_collapses_the_default_expanded_map_attribution() -> None:
